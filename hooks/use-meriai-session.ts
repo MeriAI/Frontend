@@ -126,6 +126,10 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
       } else {
         setIsVoiceAvailable(false);
         setStatusReason("service_unavailable");
+        console.error("MeriAI readiness request failed", {
+          url: meriAiClient.url("/readyz"),
+          error: readyResult.reason,
+        });
         setError(readyResult.reason instanceof Error ? readyResult.reason : new Error("The service availability check failed."));
       }
 
@@ -133,6 +137,10 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
         setServices(servicesResult.value);
       } else {
         setServices([]);
+        console.error("MeriAI services request failed", {
+          url: meriAiClient.url("/api/services"),
+          error: servicesResult.reason,
+        });
         setError(servicesResult.reason instanceof Error ? servicesResult.reason : new Error("The service catalogue could not be loaded."));
       }
     })();

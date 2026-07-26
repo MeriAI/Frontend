@@ -16,6 +16,7 @@ export class MeriAiClient {
     this.fetchClient = new FetchClient({ baseUrl });
   }
 
+  url(path: string): string { return `${this.baseUrl}${path}`; }
   ready(signal?: AbortSignal): Promise<MeriAiReady> { return this.fetchClient.request("/readyz", { signal, parse: parseReady }); }
   createSession(body: { language: string; mode: string; client_capabilities: Record<string, boolean> }): Promise<MeriAiSession> { return this.fetchClient.request("/api/sessions", { method: "POST", body, parse: parseSession }); }
   services(signal?: AbortSignal): Promise<MeriAiService[]> { return this.fetchClient.request("/api/services", { signal, parse: parseServices }); }
