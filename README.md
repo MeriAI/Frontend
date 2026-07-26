@@ -15,10 +15,14 @@ View your app in AI Studio: https://ai.studio/apps/be3703f9-e6f0-496a-a51a-1e4c5
 **Prerequisites:** Node.js 20+
 
 1. Run `npm install`.
-2. Optionally copy `.env.example` to `.env.local` to override the default
-   `https://meriai-api.onrender.com` API origin with `API_BASE_URL` (or the
-   equivalent `NEXT_PUBLIC_API_BASE_URL` override).
-3. Run `npm run dev`.
+2. Copy `.env.example` to `.env.local`. For a local backend, keep
+   `API_BASE_URL=http://localhost:8000`. For the hosted API, set
+   `API_BASE_URL=https://meriai-api.onrender.com`.
+3. On **Vercel**, set `NEXT_PUBLIC_API_BASE_URL=https://meriai-api.onrender.com`
+   (absolute URL). Do **not** set it to `/api/meriai` unless you also set
+   `API_BASE_URL` for rewrites and `NEXT_PUBLIC_WS_BASE_URL` for WebSockets.
+   On **Render**, add this frontend’s exact origin to `ALLOWED_ORIGINS`.
+4. Run `npm run dev`.
 
 ## MeriAI integration
 

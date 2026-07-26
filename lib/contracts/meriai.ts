@@ -4,6 +4,8 @@ export interface MeriAiReady {
   ready: boolean;
   missingProviders: string[];
   reasonCode?: string;
+  /** Backend `/readyz` provider map (`configured` | `missing` | `optional`). */
+  providers?: Record<string, string>;
 }
 
 export interface MeriAiSession {
@@ -140,7 +142,40 @@ function parseResearch(value: unknown): Research | undefined {
     if (!url) return [];
     return [{ title: string(citation.title) ?? url, url }];
   });
-  return { warning: string(value.external_research) ?? "External research: verify this information with its cited sources.", citations };
+  return {
+    warning:
+      string(value.warning) ??
+      string(value.external_research) ??
+      "External research: verify this information with its cited sources.",
+    citations,
+  };
+}
+
+function assistantMessageFromPayload(
+  payload: Record<string, unknown>,
+  eventSequence: number | undefined,
+  text: string,
+): MeriAiEvent {
+  const action = parseActionProposal({
+    tool_call_id: payload.tool_call_id,
+    tool_name: payload.tool_name,
+    browser_session_id: payload.browser_session_id,
+    summary: text,
+    preview: text,
+  });
+  return {
+    type: "assistant.message",
+    sequence: eventSequence,
+    text,
+    verified: payload.trust_level === "verified_kb",
+    research: parseResearch(payload.research),
+    snapshot: {
+      ...(parseSessionSnapshot(payload) ?? { missingQuestions: [] }),
+      ...(payload.tool_status === "pending_confirmation" && action
+        ? { actionProposal: action }
+        : {}),
+    },
+  };
 }
 
 /** Accepts both the documented event envelope and common flat event forms. */
@@ -149,30 +184,28 @@ export function parseMeriAiEvent(value: unknown): ParseResult<MeriAiEvent> {
   const type = string(value.type) ?? string(value.event);
   const payload = payloadOf(value);
   const eventSequence = sequence(value);
-  const text = string(payload.text) ?? string(payload.message) ?? string(payload.transcript);
+  const text =
+    string(payload.text) ??
+    string(payload.message) ??
+    string(payload.transcript) ??
+    string(payload.assistant_message) ??
+    string(value.assistant_message);
+
+  // REST `POST .../text` returns a flat SessionTextResponse with assistant_message.
+  const restAssistant = string(value.assistant_message);
+  if (!type && restAssistant) {
+    return {
+      ok: true,
+      value: assistantMessageFromPayload(value, eventSequence, restAssistant),
+    };
+  }
 
   if (type === "session.ready") {
     return { ok: true, value: { type: "session.ready", sequence: eventSequence, snapshot: parseSessionSnapshot(payload) ?? { missingQuestions: [] } } };
   }
   if (type === "assistant.message") {
-    const action = parseActionProposal({ tool_call_id: payload.tool_call_id, tool_name: payload.tool_name, browser_session_id: payload.browser_session_id, summary: text });
     return text
-      ? {
-          ok: true,
-          value: {
-            type: "assistant.message",
-            sequence: eventSequence,
-            text,
-            verified: payload.trust_level === "verified_kb",
-            research: parseResearch(payload.research),
-            snapshot: {
-              ...(parseSessionSnapshot(payload) ?? { missingQuestions: [] }),
-              ...(payload.tool_status === "pending_confirmation" && action
-                ? { actionProposal: action }
-                : {}),
-            },
-          },
-        }
+      ? { ok: true, value: assistantMessageFromPayload(payload, eventSequence, text) }
       : { ok: false, issues: [{ path: "payload.text", message: "Expected assistant text." }] };
   }
   if (type === "checklist.updated") return { ok: true, value: { type: "checklist.updated", sequence: eventSequence, checklist: parseChecklist(payload), snapshot: parseSessionSnapshot(payload) } };
@@ -206,10 +239,47 @@ export function parseMeriAiEvent(value: unknown): ParseResult<MeriAiEvent> {
 
 export function parseReady(value: unknown): ParseResult<MeriAiReady> {
   if (!isRecord(value)) return { ok: false, issues: [{ path: "$", message: "Expected readiness object." }] };
-  const missing = Array.isArray(value.missing_providers) ? value.missing_providers.filter((provider): provider is string => typeof provider === "string") : [];
+  const providers = isRecord(value.providers)
+    ? Object.fromEntries(
+        Object.entries(value.providers).flatMap(([name, status]) =>
+          typeof status === "string" ? [[name, status]] : [],
+        ),
+      )
+    : undefined;
+  const missingFromList = Array.isArray(value.missing_providers)
+    ? value.missing_providers.filter((provider): provider is string => typeof provider === "string")
+    : [];
+  const missingFromProviders = providers
+    ? Object.entries(providers)
+        .filter(([, status]) => status === "missing")
+        .map(([name]) => name)
+    : [];
+  const missing = missingFromList.length > 0 ? missingFromList : missingFromProviders;
   const status = string(value.status);
-  const ready = typeof value.ready === "boolean" ? value.ready : status !== "degraded" && missing.length === 0;
-  return { ok: true, value: { ready, missingProviders: missing, reasonCode: string(value.reason_code) ?? (status === "degraded" ? "degraded" : undefined) } };
+  // Session creation requires `/readyz` status "ready" (DB + verified KB loaded).
+  const ready = typeof value.ready === "boolean" ? value.ready : status === "ready";
+  return {
+    ok: true,
+    value: {
+      ready,
+      missingProviders: missing,
+      reasonCode: string(value.reason_code) ?? (status === "degraded" ? "degraded" : undefined),
+      ...(providers ? { providers } : {}),
+    },
+  };
+}
+
+/** Voice is available when the API is ready and at least one speech path is configured. */
+export function isVoiceReady(ready: MeriAiReady): boolean {
+  if (!ready.ready) return false;
+  if (ready.providers) {
+    const addis =
+      ready.providers.addis_ai === "configured" &&
+      ready.providers.addis_ai_voice === "configured";
+    const eleven = ready.providers.elevenlabs === "configured";
+    return addis || eleven;
+  }
+  return ready.missingProviders.length === 0;
 }
 
 export function parseSession(value: unknown): ParseResult<MeriAiSession> {

@@ -1,11 +1,68 @@
 import { describe, expect, it } from "vitest";
 
-import { parseMeriAiEvent, parseReady, parseServices, parseSession, parseSessionSnapshot } from "@/lib/contracts/meriai";
+import { isVoiceReady, parseMeriAiEvent, parseReady, parseServices, parseSession, parseSessionSnapshot } from "@/lib/contracts/meriai";
 
 describe("MeriAI contracts", () => {
   it("parses the readiness and opaque session responses", () => {
     expect(parseReady({ ready: true, missing_providers: [] })).toEqual({ ok: true, value: { ready: true, missingProviders: [], reasonCode: undefined } });
     expect(parseSession({ session_id: "opaque-session" })).toEqual({ ok: true, value: { sessionId: "opaque-session" } });
+  });
+
+  it("parses backend /readyz status and providers for session and voice gating", () => {
+    const ready = parseReady({
+      status: "ready",
+      database: "ok",
+      kb_loaded: true,
+      providers: {
+        addis_ai: "configured",
+        addis_ai_voice: "configured",
+        gemini: "configured",
+        elevenlabs: "missing",
+        exa: "optional",
+      },
+    });
+    expect(ready).toMatchObject({
+      ok: true,
+      value: {
+        ready: true,
+        missingProviders: ["elevenlabs"],
+        providers: { addis_ai: "configured", elevenlabs: "missing" },
+      },
+    });
+    expect(ready.ok && isVoiceReady(ready.value)).toBe(true);
+
+    const degraded = parseReady({
+      status: "degraded",
+      database: "ok",
+      kb_loaded: false,
+      providers: { gemini: "missing", addis_ai: "missing", addis_ai_voice: "missing", elevenlabs: "missing", exa: "optional" },
+    });
+    expect(degraded).toMatchObject({ ok: true, value: { ready: false, reasonCode: "degraded" } });
+    expect(degraded.ok && isVoiceReady(degraded.value)).toBe(false);
+  });
+
+  it("maps REST text-turn assistant_message into an assistant.message event", () => {
+    expect(
+      parseMeriAiEvent({
+        session_id: "ses_1",
+        state: "ASK_SITUATIONAL_QUESTION",
+        checklist: [],
+        missing_questions: [],
+        action_proposal: null,
+        turn_id: "turn_1",
+        trust_level: "verified_kb",
+        assistant_message: "Verified service selected.",
+        tool_status: null,
+        research: null,
+      }),
+    ).toMatchObject({
+      ok: true,
+      value: {
+        type: "assistant.message",
+        text: "Verified service selected.",
+        verified: true,
+      },
+    });
   });
 
   it("normalizes ordered assistant, checklist, and voice events", () => {

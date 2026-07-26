@@ -5,12 +5,12 @@ import type {
 } from "@/lib/contracts/api";
 
 export class ApiError extends Error {
-  readonly code: ApiErrorCode;
+  readonly code: ApiErrorCode | string;
   readonly status: number;
   readonly issues?: ValidationIssue[];
 
   constructor(
-    code: ApiErrorCode,
+    code: ApiErrorCode | string,
     message: string,
     status: number,
     options?: { cause?: unknown; issues?: ValidationIssue[] },

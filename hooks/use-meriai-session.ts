@@ -2,10 +2,36 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { meriAiClient } from "@/lib/adapters/meriai-client";
-import { parseMeriAiEvent, parseSessionSnapshot, type ActivityEntry, type BrowserActionPreview, type Checklist, type MeriAiService, type MissingQuestion, type Research, type SessionSnapshot } from "@/lib/contracts/meriai";
 import { createMessage } from "@/features/studio/fixtures";
 import type { ApiError } from "@/lib/api/errors";
+import {
+  isVoiceReady,
+  parseMeriAiEvent,
+  parseSessionSnapshot,
+  type ActivityEntry,
+  type BrowserActionPreview,
+  type Checklist,
+  type MeriAiReady,
+  type MeriAiService,
+  type MissingQuestion,
+  type Research,
+  type SessionSnapshot,
+} from "@/lib/contracts/meriai";
 import type { Message } from "@/types/studio";
+
+function applyReadyStatus(
+  ready: MeriAiReady,
+  setIsVoiceAvailable: (value: boolean) => void,
+  setStatusReason: (value: string | null) => void,
+) {
+  const voice = isVoiceReady(ready);
+  setIsVoiceAvailable(voice);
+  if (!ready.ready) {
+    setStatusReason(ready.reasonCode ?? (ready.missingProviders.join(", ") || "degraded"));
+    return;
+  }
+  setStatusReason(voice ? null : "text_only");
+}
 
 function playAudio(audioBase64: string, mimeType: string) {
   const bytes = Uint8Array.from(atob(audioBase64), (character) => character.charCodeAt(0));
@@ -93,17 +119,27 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
     socket.send(JSON.stringify({ type: "session.start" }));
   }, [handlePayload]);
   const ensureSession = useCallback(async () => {
-    if (sessionIdRef.current && sessionConfigRef.current?.language === language && sessionConfigRef.current.mode === mode) return sessionIdRef.current;
+    if (sessionIdRef.current && sessionConfigRef.current?.language === language && sessionConfigRef.current.mode === mode) {
+      return sessionIdRef.current;
+    }
     if (sessionIdRef.current) {
       socketRef.current?.close();
       sessionIdRef.current = null;
       sequenceRef.current = -1;
     }
     const ready = await meriAiClient.ready();
-    setIsVoiceAvailable(ready.ready);
-    setStatusReason(ready.ready ? null : ((ready.reasonCode ?? ready.missingProviders.join(", ")) || "text_only"));
+    applyReadyStatus(ready, setIsVoiceAvailable, setStatusReason);
     if (!ready.ready) throw new Error(ready.reasonCode ?? "The MeriAI service is degraded.");
-    const session = await meriAiClient.createSession({ language, mode, client_capabilities: { audio: typeof MediaRecorder !== "undefined", subtitles: true, keyboard: true, browser_progress: true } });
+    const session = await meriAiClient.createSession({
+      language,
+      mode,
+      client_capabilities: {
+        audio: typeof MediaRecorder !== "undefined",
+        subtitles: true,
+        keyboard: true,
+        browser_progress: true,
+      },
+    });
     sessionIdRef.current = session.sessionId;
     sessionConfigRef.current = { language, mode };
     await connect();
@@ -120,9 +156,7 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
       if (controller.signal.aborted) return;
 
       if (readyResult.status === "fulfilled") {
-        const ready = readyResult.value;
-        setIsVoiceAvailable(ready.ready);
-        setStatusReason(ready.ready ? null : ((ready.reasonCode ?? ready.missingProviders.join(", ")) || "text_only"));
+        applyReadyStatus(readyResult.value, setIsVoiceAvailable, setStatusReason);
       } else {
         setIsVoiceAvailable(false);
         setStatusReason("service_unavailable");
@@ -130,7 +164,11 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
           url: meriAiClient.url("/readyz"),
           error: readyResult.reason,
         });
-        setError(readyResult.reason instanceof Error ? readyResult.reason : new Error("The service availability check failed."));
+        setError(
+          readyResult.reason instanceof Error
+            ? readyResult.reason
+            : new Error("The service availability check failed."),
+        );
       }
 
       if (servicesResult.status === "fulfilled") {
@@ -141,7 +179,11 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
           url: meriAiClient.url("/api/services"),
           error: servicesResult.reason,
         });
-        setError(servicesResult.reason instanceof Error ? servicesResult.reason : new Error("The service catalogue could not be loaded."));
+        setError(
+          servicesResult.reason instanceof Error
+            ? servicesResult.reason
+            : new Error("The service catalogue could not be loaded."),
+        );
       }
     })();
 
@@ -155,12 +197,12 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
   }, [ensureSession, handlePayload, language]);
   const selectService = useCallback(async (serviceIdentifier: string) => {
     setIsProcessing(true); setError(null);
-    try { const sessionId = await ensureSession(); const response = await meriAiClient.sendText(sessionId, { text: `Selected service: ${serviceIdentifier}`, service_identifier: serviceIdentifier, language, turn_id: crypto.randomUUID() }); handlePayload(response); }
+    try { const sessionId = await ensureSession(); const response = await meriAiClient.sendText(sessionId, { service_identifier: serviceIdentifier, language, turn_id: crypto.randomUUID() }); handlePayload(response); }
     catch (cause) { setIsProcessing(false); setError(cause instanceof Error ? cause : new Error("The service could not be selected.")); }
   }, [ensureSession, handlePayload, language]);
   const answerQuestion = useCallback(async (questionKey: string, value: string) => {
     setIsProcessing(true); setError(null);
-    try { const sessionId = await ensureSession(); const response = await meriAiClient.sendText(sessionId, { text: `Answered ${questionKey}.`, answer: { question_key: questionKey, value }, language, turn_id: crypto.randomUUID() }); handlePayload(response); }
+    try { const sessionId = await ensureSession(); const response = await meriAiClient.sendText(sessionId, { answer: { question_key: questionKey, value }, language, turn_id: crypto.randomUUID() }); handlePayload(response); }
     catch (cause) { setIsProcessing(false); setError(cause instanceof Error ? cause : new Error("The answer could not be saved.")); }
   }, [ensureSession, handlePayload, language]);
   const stopVoice = useCallback(() => {

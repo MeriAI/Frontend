@@ -1,13 +1,39 @@
 import type { NextConfig } from "next";
 
+const DEFAULT_UPSTREAM = "https://meriai-api.onrender.com";
+
+function upstreamApiOrigin(): string {
+  const configured =
+    process.env.API_BASE_URL?.trim() ||
+    process.env.MERIAI_API_UPSTREAM?.trim() ||
+    DEFAULT_UPSTREAM;
+  return configured.replace(/\/$/, "");
+}
+
+const upstream = upstreamApiOrigin();
+
 const nextConfig: NextConfig = {
   env: {
-    // The integration guide names API_BASE_URL. Expose only this public API
-    // origin to the browser under Next.js's client-safe convention.
+    // Browser REST base. Default is the same-origin rewrite prefix.
+    // Set to an absolute API origin to bypass the proxy (e.g. local CORS testing).
     NEXT_PUBLIC_API_BASE_URL:
-      process.env.NEXT_PUBLIC_API_BASE_URL ??
-      process.env.API_BASE_URL ??
-      "https://meriai-api.onrender.com",
+      process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/meriai",
+    // WebSocket origin must be absolute (proxy paths cannot carry WS).
+    NEXT_PUBLIC_WS_BASE_URL:
+      process.env.NEXT_PUBLIC_WS_BASE_URL ??
+      (process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("http")
+        ? process.env.NEXT_PUBLIC_API_BASE_URL
+        : upstream),
+  },
+  async rewrites() {
+    // Same-origin REST proxy: /api/meriai/readyz → https://…/readyz
+    // and /api/meriai/api/services → https://…/api/services
+    return [
+      {
+        source: "/api/meriai/:path*",
+        destination: `${upstream}/:path*`,
+      },
+    ];
   },
   reactStrictMode: true,
   typescript: {

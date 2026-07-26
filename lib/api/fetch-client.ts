@@ -83,8 +83,11 @@ export class FetchClient {
 
   constructor(options: FetchClientOptions = {}) {
     this.baseUrl = options.baseUrl ?? "";
-    this.defaultTimeoutMs = options.defaultTimeoutMs ?? 15_000;
-    this.fetchImplementation = options.fetchImplementation ?? fetch;
+    // Render free-tier cold starts often exceed 15s; keep REST usable after wake.
+    this.defaultTimeoutMs = options.defaultTimeoutMs ?? 45_000;
+    // Bind fetch: a detached `window.fetch` reference throws Illegal invocation.
+    this.fetchImplementation =
+      options.fetchImplementation ?? globalThis.fetch.bind(globalThis);
   }
 
   async request<TBody, TResponse>(

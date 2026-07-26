@@ -14,7 +14,8 @@ export interface ValidationIssue {
 }
 
 export interface ApiErrorBody {
-  code: ApiErrorCode;
+  /** Frontend codes or stable MeriAI backend `detail.code` values. */
+  code: string;
   message: string;
   issues?: ValidationIssue[];
 }
@@ -42,65 +43,110 @@ const API_ERROR_CODES: ReadonlySet<string> = new Set<ApiErrorCode>([
   "INTERNAL_ERROR",
 ]);
 
-export function parseApiErrorResponse(value: unknown): ParseResult<ApiErrorResponse> {
-  if (!isRecord(value) || !isRecord(value.error)) {
+function parseValidationIssues(
+  issues: unknown,
+  pathPrefix: string,
+): ParseResult<ValidationIssue[]> {
+  if (issues === undefined) {
+    return { ok: true, value: [] };
+  }
+  if (!Array.isArray(issues)) {
     return {
       ok: false,
-      issues: [{ path: "error", message: "Expected an error object." }],
+      issues: [{ path: pathPrefix, message: "Expected an array." }],
     };
   }
-
-  const { code, message, issues } = value.error;
-  if (typeof code !== "string" || !API_ERROR_CODES.has(code)) {
-    return {
-      ok: false,
-      issues: [{ path: "error.code", message: "Unknown API error code." }],
-    };
-  }
-  if (typeof message !== "string") {
-    return {
-      ok: false,
-      issues: [{ path: "error.message", message: "Expected a string." }],
-    };
-  }
-
   const parsedIssues: ValidationIssue[] = [];
-  if (issues !== undefined) {
-    if (!Array.isArray(issues)) {
+  for (let index = 0; index < issues.length; index += 1) {
+    const issue = issues[index];
+    if (
+      !isRecord(issue) ||
+      typeof issue.path !== "string" ||
+      typeof issue.message !== "string"
+    ) {
       return {
         ok: false,
-        issues: [{ path: "error.issues", message: "Expected an array." }],
+        issues: [
+          {
+            path: `${pathPrefix}.${index}`,
+            message: "Expected a validation issue.",
+          },
+        ],
       };
     }
-    for (let index = 0; index < issues.length; index += 1) {
-      const issue = issues[index];
-      if (
-        !isRecord(issue) ||
-        typeof issue.path !== "string" ||
-        typeof issue.message !== "string"
-      ) {
-        return {
-          ok: false,
-          issues: [
-            {
-              path: `error.issues.${index}`,
-              message: "Expected a validation issue.",
-            },
-          ],
-        };
-      }
-      parsedIssues.push({ path: issue.path, message: issue.message });
+    parsedIssues.push({ path: issue.path, message: issue.message });
+  }
+  return { ok: true, value: parsedIssues };
+}
+
+export function parseApiErrorResponse(value: unknown): ParseResult<ApiErrorResponse> {
+  if (!isRecord(value)) {
+    return {
+      ok: false,
+      issues: [{ path: "$", message: "Expected an error object." }],
+    };
+  }
+
+  // Frontend-shaped errors: { error: { code, message, issues? } }
+  if (isRecord(value.error)) {
+    const { code, message, issues } = value.error;
+    if (typeof code !== "string" || !API_ERROR_CODES.has(code)) {
+      return {
+        ok: false,
+        issues: [{ path: "error.code", message: "Unknown API error code." }],
+      };
     }
+    if (typeof message !== "string") {
+      return {
+        ok: false,
+        issues: [{ path: "error.message", message: "Expected a string." }],
+      };
+    }
+    const parsedIssues = parseValidationIssues(issues, "error.issues");
+    if (!parsedIssues.ok) {
+      return parsedIssues;
+    }
+    return {
+      ok: true,
+      value: {
+        error: {
+          code,
+          message,
+          ...(parsedIssues.value.length > 0 ? { issues: parsedIssues.value } : {}),
+        },
+      },
+    };
+  }
+
+  // MeriAI FastAPI errors: { detail: { code, message } }
+  if (isRecord(value.detail)) {
+    const { code, message } = value.detail;
+    if (typeof code === "string" && typeof message === "string") {
+      return { ok: true, value: { error: { code, message } } };
+    }
+  }
+
+  // FastAPI string / validation-array detail
+  if (typeof value.detail === "string" && value.detail.length > 0) {
+    return {
+      ok: true,
+      value: { error: { code: "INVALID_REQUEST", message: value.detail } },
+    };
+  }
+  if (Array.isArray(value.detail) && value.detail.length > 0) {
+    return {
+      ok: true,
+      value: {
+        error: {
+          code: "INVALID_REQUEST",
+          message: "The request failed validation.",
+        },
+      },
+    };
   }
 
   return {
-    ok: true,
-    value: {
-      error: {
-        code: code as ApiErrorCode,
-        message,
-        ...(parsedIssues.length > 0 ? { issues: parsedIssues } : {}),
-      },
-    },
+    ok: false,
+    issues: [{ path: "error", message: "Expected an error object." }],
   };
 }
