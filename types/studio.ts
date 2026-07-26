@@ -12,6 +12,7 @@ export interface Message {
   sender: "user" | "ai";
   text: string;
   timestamp: string;
+  verified?: boolean;
 }
 
 export interface AccountSettings {

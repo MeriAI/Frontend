@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent, RefObject } from "react";
+import { useState, type FormEvent, type RefObject } from "react";
 import { BadgeCheck, BookOpenText } from "lucide-react";
 
 import { ChatComposer } from "@/components/studio/chat-composer";
@@ -9,6 +9,8 @@ import { MessageList } from "@/components/studio/message-list";
 import { useTranslations } from "@/features/i18n/use-translations";
 import type { Theme } from "@/features/settings/settings-provider";
 import type { Message } from "@/types/studio";
+import type { ActivityEntry, BrowserActionPreview, Checklist, Research } from "@/lib/contracts/meriai";
+import type { MeriAiService, MissingQuestion } from "@/lib/contracts/meriai";
 
 interface ChatWorkspaceProps {
   messages: Message[];
@@ -25,7 +27,15 @@ interface ChatWorkspaceProps {
   onNewChat: () => void;
   onSelectTopic: (topic: string) => void;
   onCopy: (id: string, text: string) => void;
-  onSpeak: (text: string) => void;
+  checklist: Checklist | null;
+  research: Research | null;
+  actionPreview: BrowserActionPreview | null;
+  activity: ActivityEntry[];
+  onConfirmAction: (confirmationText: string) => void;
+  services: MeriAiService[];
+  onSelectService: (identifier: string) => void;
+  missingQuestions: MissingQuestion[];
+  onAnswerQuestion: (questionKey: string, value: string) => void;
 }
 
 export function ChatWorkspace({
@@ -43,9 +53,18 @@ export function ChatWorkspace({
   onNewChat,
   onSelectTopic,
   onCopy,
-  onSpeak,
+  checklist,
+  research,
+  actionPreview,
+  activity,
+  onConfirmAction,
+  services,
+  onSelectService,
+  missingQuestions,
+  onAnswerQuestion,
 }: ChatWorkspaceProps) {
   const t = useTranslations();
+  const [confirmationText, setConfirmationText] = useState("");
 
   return (
     <div id="chat-workspace" className={`w-full flex-1 h-[85vh] md:h-[88vh] flex border rounded-[20px] overflow-hidden relative ${
@@ -58,6 +77,8 @@ export function ChatWorkspace({
         theme={theme}
         onNewChat={onNewChat}
         onSelectTopic={onSelectTopic}
+        services={services}
+        onSelectService={onSelectService}
       />
       <div className={`flex-1 flex flex-col justify-between overflow-hidden ${
         theme === "dark" ? "bg-[#101A1A]" : "bg-[#F0F4F2]"
@@ -140,8 +161,33 @@ export function ChatWorkspace({
               copiedMessageId={copiedMessageId}
               bottomRef={bottomRef}
               onCopy={onCopy}
-              onSpeak={onSpeak}
             />
+          )}
+          {(checklist || research || actionPreview || activity.length > 0 || missingQuestions.length > 0) && (
+            <aside className={`mt-6 max-w-2xl mx-auto w-full space-y-3 text-sm ${theme === "dark" ? "text-[#F3F8F6]" : "text-[#163F3D]"}`} aria-label="Session guidance">
+              {missingQuestions.length > 0 && <section className={`rounded-xl border p-4 ${theme === "dark" ? "border-[#334846] bg-[#182726]" : "border-[#D5DFDB] bg-white"}`}><p className="font-semibold">Information still needed</p><div className="mt-3 space-y-3">{missingQuestions.map((question) => <div key={question.key}><p>{question.prompt}</p>{question.options.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{question.options.map((option) => <button key={option.value} type="button" onClick={() => onAnswerQuestion(question.key, option.value)} className="rounded-full border border-[#66C8C1] px-3 py-1.5 text-xs font-medium">{option.label}</button>)}</div>}</div>)}</div></section>}
+              {checklist && (
+                <section className={`rounded-xl border p-4 ${theme === "dark" ? "border-[#334846] bg-[#182726]" : "border-[#D5DFDB] bg-white"}`}>
+                  <p className="font-semibold">{checklist.verified ? "Verified checklist" : "Checklist"}{checklist.title ? ` · ${checklist.title}` : ""}</p>
+                  <ul className="mt-2 space-y-1.5">{checklist.items.map((item) => <li key={item.id} className="flex gap-2"><span aria-hidden="true">{item.complete ? "✓" : "○"}</span><span>{item.label}{item.detail ? ` — ${item.detail}` : ""}</span></li>)}</ul>
+                </section>
+              )}
+              {research && (
+                <section className="rounded-xl border border-amber-500/50 bg-amber-50 p-4 text-amber-950 dark:bg-amber-950/30 dark:text-amber-50">
+                  <p className="font-semibold">External research</p><p className="mt-1">{research.warning}</p>
+                  {research.citations.length > 0 && <ul className="mt-2 list-disc pl-5">{research.citations.map((citation) => <li key={citation.url}><a href={citation.url} target="_blank" rel="noreferrer" className="underline">{citation.title}</a></li>)}</ul>}
+                </section>
+              )}
+              {actionPreview && (
+                <section className={`rounded-xl border p-4 ${theme === "dark" ? "border-[#66C8C1] bg-[#182726]" : "border-[#66C8C1] bg-[#F3F8F6]"}`}>
+                  <p className="font-semibold">Action requires your confirmation</p><p className="mt-1 whitespace-pre-wrap">{actionPreview.preview}</p>
+                  <p className="mt-2 text-xs">Continuing may open the official portal. Login, OTP, CAPTCHA, payments, uploads, declarations, signatures, and final submission remain on that portal.</p>
+                  <label className="mt-3 block text-xs font-medium" htmlFor="action-confirmation">Type your confirmation</label>
+                  <div className="mt-1 flex gap-2"><input id="action-confirmation" value={confirmationText} onChange={(event) => setConfirmationText(event.target.value)} className="min-w-0 flex-1 rounded-lg border border-[#D5DFDB] bg-white px-3 py-2 text-xs text-[#163F3D]" placeholder="Yes, continue" /><button type="button" disabled={!confirmationText.trim()} onClick={() => { onConfirmAction(confirmationText); setConfirmationText(""); }} className="rounded-full bg-[#163F3D] px-4 py-2 text-xs font-semibold text-[#F3F8F6] disabled:opacity-40">Confirm action</button></div>
+                </section>
+              )}
+              {activity.length > 0 && <section className={`rounded-xl border p-4 ${theme === "dark" ? "border-[#334846] bg-[#182726]" : "border-[#D5DFDB] bg-white"}`}><p className="font-semibold">Activity</p><ul className="mt-2 space-y-1.5 text-xs">{activity.map((entry) => <li key={entry.id}>{entry.text}{entry.timestamp ? ` · ${entry.timestamp}` : ""}</li>)}</ul></section>}
+            </aside>
           )}
         </div>
         {messages.length > 1 && (

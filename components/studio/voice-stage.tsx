@@ -12,6 +12,8 @@ interface VoiceStageProps {
   latestResponse: string;
   audioAmplitude: number;
   onToggleListening: () => void;
+  voiceAvailable: boolean;
+  statusReason: string | null;
 }
 
 export function VoiceStage({
@@ -20,6 +22,8 @@ export function VoiceStage({
   latestResponse,
   audioAmplitude,
   onToggleListening,
+  voiceAvailable,
+  statusReason,
 }: VoiceStageProps) {
   const t = useTranslations();
   const { theme } = useSettings();
@@ -39,6 +43,7 @@ export function VoiceStage({
         <button
           id="audio-sphere-button"
           onClick={onToggleListening}
+          disabled={!voiceAvailable}
           style={{ transform: `scale(${speechState === "idle" ? 1 : audioAmplitude})` }}
           className={`w-56 h-56 md:w-64 md:h-64 cursor-pointer focus:outline-none audio-sphere transition-all duration-300 relative flex items-center justify-center group ${
             speechState === "idle" ? "audio-sphere-idle"
@@ -81,12 +86,14 @@ export function VoiceStage({
             <h1 className={`headline-300 text-xl md:text-2xl font-light tracking-[-0.02em] leading-relaxed max-w-xl ${headlineClass}`}>&ldquo;{latestResponse}&rdquo;</h1>
           )}
         </div>
+        {!voiceAvailable && statusReason && <p className={`text-xs leading-5 ${mutedClass}`}>Voice is unavailable ({statusReason}). You can continue with text chat.</p>}
       </div>
 
       <div className="mt-10">
         <button
           id="main-mic-action-btn"
           onClick={onToggleListening}
+          disabled={!voiceAvailable}
           className={`pill-button px-8 py-3.5 text-sm font-medium transition-all duration-200 flex items-center gap-2.5 cursor-pointer border ${
             speechState === "listening"
               ? "bg-[#66C8C1] text-[#101A1A] border-[#66C8C1] shadow-md scale-105"

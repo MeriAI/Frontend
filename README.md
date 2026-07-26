@@ -2,12 +2,11 @@
 <img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
 </div>
 
-# Bauhaus Voice AI Studio
+# MeriAI Voice and Chat Studio
 
-Next.js voice and chat studio with typed, replaceable backend adapters. The UI
-depends on application ports rather than provider SDKs, so a future backend can
-replace Gemini, browser speech recognition, or browser speech synthesis without
-changing visual components.
+Next.js client for the MeriAI backend. The browser communicates only with the
+public HTTPS/WebSocket API; it never receives provider keys, official portal
+credentials, cookies, or service policy configuration.
 
 View your app in AI Studio: https://ai.studio/apps/be3703f9-e6f0-496a-a51a-1e4c523f2388
 
@@ -16,23 +15,22 @@ View your app in AI Studio: https://ai.studio/apps/be3703f9-e6f0-496a-a51a-1e4c5
 **Prerequisites:** Node.js 20+
 
 1. Run `npm install`.
-2. Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY` when using
-   Gemini. Without a key, `/api/chat` returns an explicit development response.
+2. Optionally copy `.env.example` to `.env.local` to override the default
+   `https://meriai-api.onrender.com` API origin with `API_BASE_URL` (or the
+   equivalent `NEXT_PUBLIC_API_BASE_URL` override).
 3. Run `npm run dev`.
 
-## Backend integration boundary
+## MeriAI integration
 
-- `lib/contracts` owns transport-safe request, response, and error contracts.
-- `lib/ports` defines the interfaces consumed by feature hooks.
-- `lib/adapters` contains the current HTTP and browser implementations.
-- `lib/server` contains provider SDK code and is never imported by client UI.
-- `app/api/chat/route.ts` validates requests and maps provider failures to the
-  shared error contract.
-
-To connect an external backend, implement `ChatClientPort`,
-`VoiceRecognitionPort`, or `VoiceSynthesisPort` and inject that adapter into the
-corresponding feature hook. Keep credentials and provider SDKs in server-only
-modules.
+- `GET /readyz` gates voice capture when required providers are unavailable.
+- An opaque in-memory session ID is created with `POST /api/sessions` and
+  reused for REST, WebSocket, reconnect, and session-state requests.
+- Live audio uses `audio/webm` frames over `/ws/v1/sessions/{session_id}`.
+  Server-produced `speech.output` audio is played immediately and is never
+  written to browser storage.
+- Checklist, research citations, action previews, and redacted activity feed
+  are rendered from structured backend events. Action confirmation is explicit
+  and remains within the current conversation turn.
 
 ## Quality checks
 

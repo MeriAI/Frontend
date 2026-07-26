@@ -9,9 +9,7 @@ import { VoiceStage } from "@/components/studio/voice-stage";
 import { useTranslations } from "@/features/i18n/use-translations";
 import { useSettings } from "@/features/settings/settings-provider";
 import { getRandomSamplePrompt } from "@/features/studio/fixtures";
-import { useChat } from "@/hooks/use-chat";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
-import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
+import { useMeriAiSession } from "@/hooks/use-meriai-session";
 import type { SpeechState, StudioMode } from "@/types/studio";
 
 interface StudioAppProps {
@@ -30,7 +28,6 @@ export function StudioApp({ initialMode = "voice" }: StudioAppProps) {
     setContrast,
     isMuted,
     setIsMuted,
-    voiceSpeed,
     resetAccessibility,
   } = useSettings();
   const t = useTranslations();
@@ -43,49 +40,30 @@ export function StudioApp({ initialMode = "voice" }: StudioAppProps) {
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { speak, cancel: cancelSpeech } = useSpeechSynthesis({
-    isMuted,
-    rate: voiceSpeed,
-    onStart: () => setSpeechState("speaking"),
-    onEnd: () => setSpeechState("idle"),
-  });
   const {
     messages,
-    latestResponse,
     isProcessing,
-    processPrompt,
-    startNewChat,
-  } = useChat({
-    mode,
-    language,
-    welcomeText: t.chat.welcome,
-    newSessionText: t.chat.newSession,
-    initialResponse: t.voice.initialResponse,
-    onResponse: (text) => {
-      void speak(text);
-    },
-  });
-  const completeRecognition = useCallback(
-    (text: string) => {
-      setSpeechState("processing");
-      void processPrompt(text);
-    },
-    [processPrompt],
-  );
-  const {
+    isVoiceAvailable,
+    statusReason,
     transcript,
-    isListening,
-    start: startListening,
-    stop: stopListening,
-  } = useSpeechRecognition({ onComplete: completeRecognition });
+    checklist,
+    research,
+    actionPreview,
+    activity,
+    services,
+    missingQuestions,
+    error,
+    sendText,
+    selectService,
+    answerQuestion,
+    startVoice,
+    stopVoice,
+    confirmAction,
+    startNewChat,
+  } = useMeriAiSession(language, mode, t.chat.welcome, isMuted);
+  const [isListening, setIsListening] = useState(false);
 
-  useEffect(() => {
-    if (isListening) {
-      setSpeechState("listening");
-    } else if (!isProcessing && speechState === "listening") {
-      setSpeechState("idle");
-    }
-  }, [isListening, isProcessing, speechState]);
+  useEffect(() => { if (isListening) setSpeechState("listening"); else if (!isProcessing) setSpeechState("idle"); }, [isListening, isProcessing]);
 
   useEffect(() => {
     if (isProcessing) setSpeechState("processing");
@@ -117,19 +95,19 @@ export function StudioApp({ initialMode = "voice" }: StudioAppProps) {
 
   const toggleListening = useCallback(() => {
     if (isListening) {
-      stopListening();
+      stopVoice();
+      setIsListening(false);
       return;
     }
-    if (speechState === "idle" || speechState === "speaking") {
-      cancelSpeech();
-      startListening();
+    if (isVoiceAvailable && (speechState === "idle" || speechState === "speaking")) {
+      void startVoice().then(() => setIsListening(true)).catch(() => setSpeechState("idle"));
     }
   }, [
-    cancelSpeech,
     isListening,
+    isVoiceAvailable,
     speechState,
-    startListening,
-    stopListening,
+    startVoice,
+    stopVoice,
   ]);
 
   const handleChatSubmit = (event: FormEvent) => {
@@ -138,7 +116,7 @@ export function StudioApp({ initialMode = "voice" }: StudioAppProps) {
     const text = chatInput;
     setChatInput("");
     setSpeechState("processing");
-    void processPrompt(text);
+    void sendText(text);
   };
 
   const handleCopyMessage = (id: string, text: string) => {
@@ -181,13 +159,16 @@ export function StudioApp({ initialMode = "voice" }: StudioAppProps) {
         contrast={contrast}
       />
       <main className={`flex-1 w-full mx-auto flex flex-col items-center justify-center relative ${mode === "chat" ? "max-w-full px-2 md:px-4 py-2" : "max-w-4xl px-6 py-6"}`}>
+        {error && <p role="alert" className="mb-3 max-w-2xl rounded-lg border border-red-400 bg-red-50 px-3 py-2 text-xs text-red-900">{error.message}</p>}
         {mode === "voice" ? (
           <VoiceStage
             speechState={speechState}
             transcript={transcript}
-            latestResponse={latestResponse}
+            latestResponse={messages.at(-1)?.sender === "ai" ? messages.at(-1)?.text ?? t.voice.initialResponse : t.voice.initialResponse}
             audioAmplitude={audioAmplitude}
             onToggleListening={toggleListening}
+            voiceAvailable={isVoiceAvailable}
+            statusReason={statusReason}
           />
         ) : (
           <ChatWorkspace
@@ -202,16 +183,24 @@ export function StudioApp({ initialMode = "voice" }: StudioAppProps) {
             onSubmit={handleChatSubmit}
             onPresetPrompt={() => {
               setSpeechState("processing");
-              void processPrompt(getRandomSamplePrompt(t.chat.samplePrompts));
+              void sendText(getRandomSamplePrompt(t.chat.samplePrompts));
             }}
             onToggleListening={toggleListening}
             onNewChat={startNewChat}
             onSelectTopic={(topic) => {
               setSpeechState("processing");
-              void processPrompt(t.chat.topicPrompt(topic));
+              void sendText(t.chat.topicPrompt(topic));
             }}
             onCopy={handleCopyMessage}
-            onSpeak={(text) => void speak(text)}
+            checklist={checklist}
+            research={research}
+            actionPreview={actionPreview}
+            activity={activity}
+            onConfirmAction={confirmAction}
+            services={services}
+            onSelectService={selectService}
+            missingQuestions={missingQuestions}
+            onAnswerQuestion={answerQuestion}
           />
         )}
       </main>

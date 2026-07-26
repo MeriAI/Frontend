@@ -4,12 +4,15 @@ import { Plus } from "lucide-react";
 
 import { useTranslations } from "@/features/i18n/use-translations";
 import type { Theme } from "@/features/settings/settings-provider";
+import type { MeriAiService } from "@/lib/contracts/meriai";
 
 interface ChatSidebarProps {
   isOpen: boolean;
   theme: Theme;
   onNewChat: () => void;
   onSelectTopic: (topic: string) => void;
+  services: MeriAiService[];
+  onSelectService: (identifier: string) => void;
 }
 
 export function ChatSidebar({
@@ -17,6 +20,8 @@ export function ChatSidebar({
   theme,
   onNewChat,
   onSelectTopic,
+  services,
+  onSelectService,
 }: ChatSidebarProps) {
   const t = useTranslations();
 
@@ -48,17 +53,17 @@ export function ChatSidebar({
             theme === "dark" ? "text-[#D5DFDB]" : "text-[#65736F]"
           }`}>{t.chat.topicsLabel}</div>
           <div className="space-y-0.5">
-            {t.chat.topics.map((topic) => (
+            {(services.length > 0 ? services : t.chat.topics.map((label) => ({ identifier: label, label }))).map((topic) => (
               <button
-                key={topic}
-                onClick={() => onSelectTopic(topic)}
+                key={topic.identifier}
+                onClick={() => services.length > 0 ? onSelectService(topic.identifier) : onSelectTopic(topic.label)}
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors truncate cursor-pointer ${
                   theme === "dark"
                     ? "text-[#F3F8F6] hover:bg-[#182726]"
                     : "text-[#163F3D] hover:bg-[#F0F4F2]"
                 }`}
               >
-                {topic}
+                {topic.label}
               </button>
             ))}
           </div>

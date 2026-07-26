@@ -2,5 +2,5 @@
   "name": "Bauhaus Voice AI Studio",
   "description": "Voice-first AI interface with ElevenLabs-inspired Bauhaus studio notebook design system and fluid morphing audio sphere visualizer.",
   "requestFramePermissions": ["microphone"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": ["MAJOR_CAPABILITY_EXTERNAL_API_INTEGRATION"]
 }

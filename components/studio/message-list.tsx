@@ -13,7 +13,7 @@ interface MessageListProps {
   copiedMessageId: string | null;
   bottomRef: RefObject<HTMLDivElement | null>;
   onCopy: (id: string, text: string) => void;
-  onSpeak: (text: string) => void;
+  onSpeak?: (text: string) => void;
 }
 
 export function MessageList({
@@ -39,7 +39,7 @@ export function MessageList({
                 theme === "dark" ? "text-[#66C8C1]" : "text-[#163F3D]"
               }`}
             >
-              {t.chat.assistantName}
+              {message.verified ? "Verified guidance" : t.chat.assistantName}
             </span>
           )}
           <div
@@ -74,7 +74,7 @@ export function MessageList({
                     <Copy className="w-3 h-3" />
                   )}
                 </button>
-                <button
+                {onSpeak && <button
                   onClick={() => onSpeak(message.text)}
                   title={t.chat.speakAloudTitle}
                   className={`transition-colors cursor-pointer ${
@@ -82,7 +82,7 @@ export function MessageList({
                   }`}
                 >
                   <Volume2 className="w-3 h-3" />
-                </button>
+                </button>}
               </div>
             )}
           </div>
