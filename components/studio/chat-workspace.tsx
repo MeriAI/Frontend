@@ -9,7 +9,7 @@ import { MessageList } from "@/components/studio/message-list";
 import { useTranslations } from "@/features/i18n/use-translations";
 import type { Theme } from "@/features/settings/settings-provider";
 import type { Message } from "@/types/studio";
-import type { ActivityEntry, BrowserActionPreview, Checklist, Research } from "@/lib/contracts/meriai";
+import type { ActivityEntry, BrowserActionPreview, Checklist } from "@/lib/contracts/meriai";
 import type { MeriAiService, MissingQuestion } from "@/lib/contracts/meriai";
 
 interface ChatWorkspaceProps {
@@ -26,7 +26,6 @@ interface ChatWorkspaceProps {
   onNewChat: () => void;
   onCopy: (id: string, text: string) => void;
   checklist: Checklist | null;
-  research: Research | null;
   actionPreview: BrowserActionPreview | null;
   activity: ActivityEntry[];
   onConfirmAction: (confirmationText: string) => void;
@@ -106,7 +105,6 @@ export function ChatWorkspace({
   onNewChat,
   onCopy,
   checklist,
-  research,
   actionPreview,
   activity,
   onConfirmAction,
@@ -213,7 +211,7 @@ export function ChatWorkspace({
               onCopy={onCopy}
             />
           )}
-          {(checklist || research || actionPreview || activity.length > 0 || missingQuestions.length > 0) && (
+          {(checklist || actionPreview || activity.length > 0 || missingQuestions.length > 0) && (
             <aside className={`mt-6 max-w-2xl mx-auto w-full space-y-3 text-sm ${theme === "dark" ? "text-[#F3F8F6]" : "text-[#163F3D]"}`} aria-label="Session guidance">
               {missingQuestions.length > 0 && (
                 <section className={`rounded-xl border p-4 ${theme === "dark" ? "border-[#334846] bg-[#182726]" : "border-[#D5DFDB] bg-white"}`}>
@@ -227,12 +225,6 @@ export function ChatWorkspace({
                 <section className={`rounded-xl border p-4 ${theme === "dark" ? "border-[#334846] bg-[#182726]" : "border-[#D5DFDB] bg-white"}`}>
                   <p className="font-semibold">{checklist.verified ? "Verified checklist" : "Checklist"}{checklist.title ? ` · ${checklist.title}` : ""}</p>
                   <ul className="mt-2 space-y-1.5">{checklist.items.map((item) => <li key={item.id} className="flex gap-2"><span aria-hidden="true">{item.complete ? "✓" : "○"}</span><span>{item.label}{item.detail ? ` — ${item.detail}` : ""}</span></li>)}</ul>
-                </section>
-              )}
-              {research && (
-                <section className="rounded-xl border border-amber-500/50 bg-amber-50 p-4 text-amber-950 dark:bg-amber-950/30 dark:text-amber-50">
-                  <p className="font-semibold">External research</p><p className="mt-1">{research.warning}</p>
-                  {research.citations.length > 0 && <ul className="mt-2 list-disc pl-5">{research.citations.map((citation) => <li key={citation.url}><a href={citation.url} target="_blank" rel="noreferrer" className="underline">{citation.title}</a></li>)}</ul>}
                 </section>
               )}
               {actionPreview && (

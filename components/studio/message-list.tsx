@@ -1,11 +1,75 @@
 "use client";
 
-import type { RefObject } from "react";
-import { Check, Copy, Volume2 } from "lucide-react";
+import { useId, useState, type RefObject } from "react";
+import { BookOpenText, Check, ChevronDown, Copy, ExternalLink, Volume2 } from "lucide-react";
 
 import { useTranslations } from "@/features/i18n/use-translations";
 import type { Theme } from "@/features/settings/settings-provider";
 import type { Message } from "@/types/studio";
+
+function getHostname(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+function SourceTray({ message, theme }: { message: Message; theme: Theme }) {
+  const t = useTranslations();
+  const [isOpen, setIsOpen] = useState(false);
+  const contentId = useId();
+  const research = message.research;
+
+  if (!research) return null;
+
+  const citations = research.citations;
+  if (citations.length === 0) {
+    return (
+      <p className={`mt-2 max-w-[92%] px-1 text-xs leading-5 ${theme === "dark" ? "text-[#D5DFDB]" : "text-[#65736F]"}`}>
+        {research.warning || t.chat.researchReviewNotice}
+      </p>
+    );
+  }
+
+  return (
+    <section className={`mt-2 w-full max-w-[92%] overflow-hidden rounded-xl border ${theme === "dark" ? "border-[#334846] bg-[#182726]" : "border-[#D5DFDB] bg-white"}`} aria-label={t.chat.sources}>
+      <button
+        type="button"
+        aria-expanded={isOpen}
+        aria-controls={contentId}
+        onClick={() => setIsOpen((current) => !current)}
+        className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-xs font-semibold transition-colors ${theme === "dark" ? "text-[#F3F8F6] hover:bg-[#213331]" : "text-[#163F3D] hover:bg-[#F3F8F6]"}`}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <BookOpenText className="size-4 shrink-0 text-[#66C8C1]" aria-hidden="true" />
+          <span>{t.chat.sources}</span>
+          <span className={`font-normal ${theme === "dark" ? "text-[#D5DFDB]" : "text-[#65736F]"}`}>{t.chat.sourceCount(citations.length)}</span>
+        </span>
+        <ChevronDown className={`size-4 shrink-0 text-[#66C8C1] transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+      </button>
+      {isOpen && (
+        <div id={contentId} className={`border-t px-3 pb-3 pt-2.5 ${theme === "dark" ? "border-[#334846]" : "border-[#D5DFDB]"}`}>
+          <p className={`mb-2.5 text-xs leading-5 ${theme === "dark" ? "text-[#D5DFDB]" : "text-[#65736F]"}`}>{research.warning || t.chat.researchReviewNotice}</p>
+          <ul className="space-y-2">
+            {citations.map((citation) => (
+              <li key={citation.url}>
+                <a href={citation.url} target="_blank" rel="noreferrer" className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${theme === "dark" ? "border-[#334846] hover:border-[#66C8C1] hover:bg-[#213331]" : "border-[#D5DFDB] hover:border-[#66C8C1] hover:bg-[#F3F8F6]"}`}>
+                  <span className={`grid size-7 shrink-0 place-items-center rounded-md ${theme === "dark" ? "bg-[#101A1A] text-[#66C8C1]" : "bg-[#F0F4F2] text-[#163F3D]"}`}><BookOpenText className="size-3.5" aria-hidden="true" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-medium">{citation.title}</span>
+                    <span className={`mt-0.5 block truncate text-[11px] font-normal ${theme === "dark" ? "text-[#D5DFDB]" : "text-[#65736F]"}`}>{getHostname(citation.url)}</span>
+                  </span>
+                  <ExternalLink className="size-3.5 shrink-0 text-[#66C8C1]" aria-hidden="true" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
 
 interface MessageListProps {
   messages: Message[];
@@ -55,6 +119,7 @@ export function MessageList({
           >
             <p className="font-normal whitespace-pre-wrap">{message.text}</p>
           </div>
+          {message.sender === "ai" && <SourceTray message={message} theme={theme} />}
           <div className={`flex items-center gap-2 text-[10px] font-mono mt-1 px-1 ${
             theme === "dark" ? "text-[#D5DFDB]" : "text-[#65736F]"
           }`}>

@@ -146,6 +146,9 @@ const en = {
     userFooter: "You",
     copyTitle: "Copy text",
     speakAloudTitle: "Speak response aloud",
+    sources: "Sources",
+    sourceCount: (count: number) => `${count} ${count === 1 ? "source" : "sources"}`,
+    researchReviewNotice: "External research only. Review these sources before relying on this guidance.",
     welcome:
       "Welcome to MeriAI. I can help you understand requirements, documents, fees, and next steps for Ethiopian government services. Which service would you like to prepare for?",
     newSession:
@@ -322,6 +325,9 @@ const am: Translation = {
     userFooter: "እርስዎ",
     copyTitle: "ጽሑፉን ቅዳ",
     speakAloudTitle: "መልሱን በድምፅ አንብብ",
+    sources: "ምንጮች",
+    sourceCount: (count: number) => `${count} ምንጭ${count === 1 ? "" : "ች"}`,
+    researchReviewNotice: "ይህ ከውጭ ምርምር የተገኘ መረጃ ነው። በመመሪያው ላይ ከመተማመንዎ በፊት ምንጮቹን ይመልከቱ።",
     welcome:
       "ወደ MeriAI እንኳን በደህና መጡ። ለኢትዮጵያ የመንግስት አገልግሎቶች መስፈርቶችን፣ ሰነዶችን፣ ክፍያዎችን እና ቀጣይ ደረጃዎችን ለመረዳት ልረዳዎት እችላለሁ። የትኛውን አገልግሎት እንዲያዘጋጁ ይፈልጋሉ?",
     newSession:

@@ -1,4 +1,5 @@
 import type { ChatLanguage, ChatMode } from "@/lib/contracts/chat";
+import type { Research } from "@/lib/contracts/meriai";
 
 export type StudioMode = ChatMode;
 export type Language = ChatLanguage;
@@ -13,6 +14,7 @@ export interface Message {
   text: string;
   timestamp: string;
   verified?: boolean;
+  research?: Research;
 }
 
 export interface AccountSettings {

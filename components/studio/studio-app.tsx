@@ -46,7 +46,6 @@ export function StudioApp({ initialMode = "voice" }: StudioAppProps) {
     statusReason,
     transcript,
     checklist,
-    research,
     actionPreview,
     activity,
     services,
@@ -192,7 +191,6 @@ export function StudioApp({ initialMode = "voice" }: StudioAppProps) {
             onNewChat={startNewChat}
             onCopy={handleCopyMessage}
             checklist={checklist}
-            research={research}
             actionPreview={actionPreview}
             activity={activity}
             onConfirmAction={confirmAction}

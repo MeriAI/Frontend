@@ -14,7 +14,6 @@ import {
   type MeriAiReady,
   type MeriAiService,
   type MissingQuestion,
-  type Research,
   type SessionSnapshot,
 } from "@/lib/contracts/meriai";
 import type { Message } from "@/types/studio";
@@ -58,7 +57,6 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
   const [statusReason, setStatusReason] = useState<string | null>(null);
   const [transcript, setTranscript] = useState("");
   const [checklist, setChecklist] = useState<Checklist | null>(null);
-  const [research, setResearch] = useState<Research | null>(null);
   const [actionPreview, setActionPreview] = useState<BrowserActionPreview | null>(null);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [services, setServices] = useState<MeriAiService[]>([]);
@@ -83,7 +81,7 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
       if (parsed.value.sequence !== undefined) sequenceRef.current = parsed.value.sequence;
       const event = parsed.value;
       if (event.type === "session.ready") applySnapshot(event.snapshot);
-      if (event.type === "assistant.message") { setMessages((current) => [...current, { ...createMessage("ai", event.text), verified: event.verified }]); setResearch(event.research ?? null); applySnapshot(event.snapshot); setIsProcessing(false); }
+      if (event.type === "assistant.message") { setMessages((current) => [...current, { ...createMessage("ai", event.text), verified: event.verified, research: event.research }]); applySnapshot(event.snapshot); setIsProcessing(false); }
       if (event.type === "checklist.updated") { setChecklist(event.checklist); applySnapshot(event.snapshot); }
       if (event.type === "transcript.final") setTranscript(event.text);
       if (event.type === "speech.output" && !isMuted && event.status && event.audioBase64 && event.mimeType) playAudio(event.audioBase64, event.mimeType);
@@ -260,7 +258,7 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
     recorder.start(250); setTranscript("");
   }, [connect, ensureSession, isVoiceAvailable, language, stopVoice]);
   const confirmAction = useCallback(async (confirmationText: string) => { const sessionId = sessionIdRef.current; if (!actionPreview || !sessionId || !confirmationText.trim()) return; try { const response = await meriAiClient.confirm(sessionId, { tool_call_id: actionPreview.id, accepted: true, confirmation_text: confirmationText.trim() }); handlePayload(response); setActionPreview(null); } catch (cause) { setError(cause instanceof Error ? cause : new Error("Confirmation failed.")); } }, [actionPreview, handlePayload]);
-  const startNewChat = useCallback(() => { socketRef.current?.close(); sessionIdRef.current = null; sessionConfigRef.current = null; sequenceRef.current = -1; setChecklist(null); setResearch(null); setActionPreview(null); setActivity([]); setMissingQuestions([]); setTranscript(""); setMessages([createMessage("ai", welcome)]); }, [welcome]);
+  const startNewChat = useCallback(() => { socketRef.current?.close(); sessionIdRef.current = null; sessionConfigRef.current = null; sequenceRef.current = -1; setChecklist(null); setActionPreview(null); setActivity([]); setMissingQuestions([]); setTranscript(""); setMessages([createMessage("ai", welcome)]); }, [welcome]);
   useEffect(() => () => { if (reconnectRef.current) clearTimeout(reconnectRef.current); recorderRef.current?.stop(); streamRef.current?.getTracks().forEach((track) => track.stop()); socketRef.current?.close(); }, []);
-  return { messages, isProcessing, isVoiceAvailable, statusReason, transcript, checklist, research, actionPreview, activity, services, missingQuestions, error, sendText, selectService, answerQuestion, startVoice, stopVoice, confirmAction, startNewChat, isRecording: recorderRef.current?.state === "recording" };
+  return { messages, isProcessing, isVoiceAvailable, statusReason, transcript, checklist, actionPreview, activity, services, missingQuestions, error, sendText, selectService, answerQuestion, startVoice, stopVoice, confirmAction, startNewChat, isRecording: recorderRef.current?.state === "recording" };
 }
