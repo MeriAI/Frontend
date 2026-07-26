@@ -27,6 +27,7 @@ export interface SessionSnapshot {
 export interface MissingQuestion {
   key: string;
   prompt: string;
+  answerType: "choice" | "yes_no" | "text" | "number" | "date";
   options: Array<{ value: string; label: string }>;
 }
 
@@ -72,7 +73,13 @@ export type MeriAiEvent =
   | { type: "checklist.updated"; sequence?: number; checklist: Checklist; snapshot?: SessionSnapshot }
   | { type: "transcript.final"; sequence?: number; text: string }
   | { type: "speech.output"; sequence?: number; audioBase64?: string; mimeType?: string; status?: string; reasonCode?: string }
-  | { type: "status"; sequence?: number; status: string; reasonCode?: string }
+  | {
+      type: "status";
+      sequence?: number;
+      status: string;
+      reasonCode?: string;
+      speechStatus?: string;
+    }
   | { type: "action.result"; sequence?: number; entry?: ActivityEntry; snapshot?: SessionSnapshot }
   | { type: "error"; sequence?: number; code: string };
 
@@ -117,18 +124,22 @@ export function parseSessionSnapshot(value: unknown): SessionSnapshot | undefine
     state: string(value.state),
     checklist: Array.isArray(value.checklist) ? parseChecklist(value) : isRecord(value.checklist) ? parseChecklist(value.checklist) : undefined,
     missingQuestions: Array.isArray(value.missing_questions) ? value.missing_questions.flatMap((question, index) => {
-      if (typeof question === "string") return [{ key: String(index), prompt: question, options: [] }];
+      if (typeof question === "string") return [{ key: String(index), prompt: question, answerType: "text", options: [] }];
       if (!isRecord(question)) return [];
       const key = string(question.key);
       const prompt = string(question.prompt_en) ?? string(question.prompt_am) ?? key;
       if (!key || !prompt) return [];
+      const rawAnswerType = string(question.answer_type);
+      const answerType = rawAnswerType === "choice" || rawAnswerType === "yes_no" || rawAnswerType === "number" || rawAnswerType === "date"
+        ? rawAnswerType
+        : "text";
       const options = Array.isArray(question.options) ? question.options.flatMap((option) => {
         if (!isRecord(option)) return [];
         const optionValue = string(option.value);
         const label = string(option.label_en) ?? string(option.label_am) ?? optionValue;
         return optionValue && label ? [{ value: optionValue, label }] : [];
       }) : [];
-      return [{ key, prompt, options }];
+      return [{ key, prompt, answerType, options }];
     }) : [],
     actionProposal: parseActionProposal(value.action_proposal),
   };
@@ -217,7 +228,19 @@ export function parseMeriAiEvent(value: unknown): ParseResult<MeriAiEvent> {
   }
   if (type === "status") {
     const status = string(payload.state) ?? string(payload.status);
-    return status ? { ok: true, value: { type: "status", sequence: eventSequence, status, reasonCode: string(payload.reason_code) } } : { ok: false, issues: [{ path: "payload.status", message: "Expected a status." }] };
+    const speech = isRecord(payload.speech) ? payload.speech : undefined;
+    return status
+      ? {
+          ok: true,
+          value: {
+            type: "status",
+            sequence: eventSequence,
+            status,
+            reasonCode: string(payload.reason_code) ?? string(speech?.reason_code),
+            speechStatus: string(speech?.status),
+          },
+        }
+      : { ok: false, issues: [{ path: "payload.status", message: "Expected a status." }] };
   }
   if (type === "action.result") {
     const entryText = string(payload.text) ?? string(payload.message) ?? string(payload.summary);

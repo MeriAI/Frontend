@@ -33,7 +33,63 @@ interface ChatWorkspaceProps {
   services: MeriAiService[];
   onSelectService: (identifier: string) => void;
   missingQuestions: MissingQuestion[];
-  onAnswerQuestion: (questionKey: string, value: string) => void;
+  onAnswerQuestion: (questionKey: string, value: unknown) => void;
+}
+
+function MissingQuestionAnswer({
+  question,
+  onAnswer,
+}: {
+  question: MissingQuestion;
+  onAnswer: (questionKey: string, value: unknown) => void;
+}) {
+  const [value, setValue] = useState("");
+
+  if (question.answerType === "choice") {
+    return (
+      <div>
+        <p>{question.prompt}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {question.options.map((option) => (
+            <button key={option.value} type="button" onClick={() => onAnswer(question.key, option.value)} className="rounded-full border border-[#66C8C1] px-3 py-1.5 text-xs font-medium">
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (question.answerType === "yes_no") {
+    return (
+      <div>
+        <p>{question.prompt}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button type="button" onClick={() => onAnswer(question.key, true)} className="rounded-full border border-[#66C8C1] px-3 py-1.5 text-xs font-medium">Yes</button>
+          <button type="button" onClick={() => onAnswer(question.key, false)} className="rounded-full border border-[#66C8C1] px-3 py-1.5 text-xs font-medium">No</button>
+        </div>
+      </div>
+    );
+  }
+
+  const inputType = question.answerType === "number" ? "number" : question.answerType === "date" ? "date" : "text";
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        const answer = question.answerType === "number" ? Number(value) : value.trim();
+        if (answer === "" || (typeof answer === "number" && !Number.isFinite(answer))) return;
+        onAnswer(question.key, answer);
+        setValue("");
+      }}
+    >
+      <label className="block" htmlFor={`question-${question.key}`}>{question.prompt}</label>
+      <div className="mt-2 flex gap-2">
+        <input id={`question-${question.key}`} type={inputType} value={value} onChange={(event) => setValue(event.target.value)} required className="min-w-0 flex-1 rounded-lg border border-[#D5DFDB] bg-white px-3 py-2 text-xs text-[#163F3D]" />
+        <button type="submit" className="rounded-full bg-[#163F3D] px-4 py-2 text-xs font-semibold text-[#F3F8F6]">Continue</button>
+      </div>
+    </form>
+  );
 }
 
 export function ChatWorkspace({
@@ -159,7 +215,14 @@ export function ChatWorkspace({
           )}
           {(checklist || research || actionPreview || activity.length > 0 || missingQuestions.length > 0) && (
             <aside className={`mt-6 max-w-2xl mx-auto w-full space-y-3 text-sm ${theme === "dark" ? "text-[#F3F8F6]" : "text-[#163F3D]"}`} aria-label="Session guidance">
-              {missingQuestions.length > 0 && <section className={`rounded-xl border p-4 ${theme === "dark" ? "border-[#334846] bg-[#182726]" : "border-[#D5DFDB] bg-white"}`}><p className="font-semibold">Information still needed</p><div className="mt-3 space-y-3">{missingQuestions.map((question) => <div key={question.key}><p>{question.prompt}</p>{question.options.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{question.options.map((option) => <button key={option.value} type="button" onClick={() => onAnswerQuestion(question.key, option.value)} className="rounded-full border border-[#66C8C1] px-3 py-1.5 text-xs font-medium">{option.label}</button>)}</div>}</div>)}</div></section>}
+              {missingQuestions.length > 0 && (
+                <section className={`rounded-xl border p-4 ${theme === "dark" ? "border-[#334846] bg-[#182726]" : "border-[#D5DFDB] bg-white"}`}>
+                  <p className="font-semibold">Information still needed</p>
+                  <div className="mt-3 space-y-3">
+                    {missingQuestions.map((question) => <MissingQuestionAnswer key={question.key} question={question} onAnswer={onAnswerQuestion} />)}
+                  </div>
+                </section>
+              )}
               {checklist && (
                 <section className={`rounded-xl border p-4 ${theme === "dark" ? "border-[#334846] bg-[#182726]" : "border-[#D5DFDB] bg-white"}`}>
                   <p className="font-semibold">{checklist.verified ? "Verified checklist" : "Checklist"}{checklist.title ? ` · ${checklist.title}` : ""}</p>

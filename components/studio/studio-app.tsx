@@ -69,6 +69,14 @@ export function StudioApp({ initialMode = "voice" }: StudioAppProps) {
   }, [isProcessing]);
 
   useEffect(() => {
+    if (!isVoiceAvailable && isListening) {
+      stopVoice(false);
+      setIsListening(false);
+      setSpeechState("idle");
+    }
+  }, [isListening, isVoiceAvailable, stopVoice]);
+
+  useEffect(() => {
     if (speechState !== "listening" && speechState !== "speaking") return;
     const interval = setInterval(() => {
       setAudioAmplitude(0.98 + Math.random() * 0.14);

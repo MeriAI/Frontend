@@ -48,6 +48,7 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
   const streamRef = useRef<MediaStream | null>(null);
   const sequenceRef = useRef(-1);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioSendChainRef = useRef<Promise<void>>(Promise.resolve());
   const recordedBytesRef = useRef(0);
   const activeVoiceTurnRef = useRef<string | null>(null);
   const sessionConfigRef = useRef<{ language: string; mode: string } | null>(null);
@@ -86,7 +87,12 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
       if (event.type === "checklist.updated") { setChecklist(event.checklist); applySnapshot(event.snapshot); }
       if (event.type === "transcript.final") setTranscript(event.text);
       if (event.type === "speech.output" && !isMuted && event.status && event.audioBase64 && event.mimeType) playAudio(event.audioBase64, event.mimeType);
-      if (event.type === "status") { setIsVoiceAvailable(event.status !== "text_only"); setStatusReason(event.status === "text_only" ? event.reasonCode ?? "text_only" : null); }
+      if (event.type === "status") {
+        const unavailable = event.status === "text_only" || event.speechStatus === "fallback";
+        setIsVoiceAvailable(!unavailable);
+        setStatusReason(unavailable ? event.reasonCode ?? "text_only" : null);
+        if (unavailable) setIsProcessing(false);
+      }
       if (event.type === "action.result") {
         const entry = event.entry;
         if (entry) setActivity((current) => [...current, entry]);
@@ -188,7 +194,7 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
     })();
 
     return () => controller.abort();
-  }, []);
+  }, [language]);
   const sendText = useCallback(async (text: string) => {
     const prompt = text.trim(); if (!prompt) return;
     setMessages((current) => [...current, createMessage("user", prompt)]); setIsProcessing(true); setError(null);
@@ -200,22 +206,15 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
     try { const sessionId = await ensureSession(); const response = await meriAiClient.sendText(sessionId, { service_identifier: serviceIdentifier, language, turn_id: crypto.randomUUID() }); handlePayload(response); }
     catch (cause) { setIsProcessing(false); setError(cause instanceof Error ? cause : new Error("The service could not be selected.")); }
   }, [ensureSession, handlePayload, language]);
-  const answerQuestion = useCallback(async (questionKey: string, value: string) => {
+  const answerQuestion = useCallback(async (questionKey: string, value: unknown) => {
     setIsProcessing(true); setError(null);
     try { const sessionId = await ensureSession(); const response = await meriAiClient.sendText(sessionId, { answer: { question_key: questionKey, value }, language, turn_id: crypto.randomUUID() }); handlePayload(response); }
     catch (cause) { setIsProcessing(false); setError(cause instanceof Error ? cause : new Error("The answer could not be saved.")); }
   }, [ensureSession, handlePayload, language]);
-  const stopVoice = useCallback(() => {
-    const turnId = activeVoiceTurnRef.current;
-    activeVoiceTurnRef.current = null;
-    recorderRef.current?.stop();
-    recorderRef.current = null;
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    if (turnId && socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: "audio.commit", turn_id: turnId }));
-    }
-    setIsProcessing(true);
+  const stopVoice = useCallback((showProcessing = true) => {
+    const recorder = recorderRef.current;
+    if (recorder?.state === "recording") recorder.stop();
+    if (showProcessing) setIsProcessing(true);
   }, []);
   const startVoice = useCallback(async () => {
     if (!isVoiceAvailable || !navigator.mediaDevices) return;
@@ -232,8 +231,32 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
     const turnId = crypto.randomUUID();
     activeVoiceTurnRef.current = turnId;
     recordedBytesRef.current = 0;
-    socketRef.current.send(JSON.stringify({ type: "audio.start", turn_id: turnId, language, mime_type: mimeType }));
-    recorder.ondataavailable = async (event) => { recordedBytesRef.current += event.data.size; if (recordedBytesRef.current > 5 * 1024 * 1024) { stopVoice(); return; } if (event.data.size && socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(await event.data.arrayBuffer()); };
+    const socket = socketRef.current;
+    audioSendChainRef.current = Promise.resolve();
+    socket.send(JSON.stringify({ type: "audio.start", turn_id: turnId, language, mime_type: mimeType }));
+    recorder.ondataavailable = (event) => {
+      recordedBytesRef.current += event.data.size;
+      if (recordedBytesRef.current > 5 * 1024 * 1024) {
+        stopVoice();
+        return;
+      }
+      if (!event.data.size) return;
+      audioSendChainRef.current = audioSendChainRef.current.then(async () => {
+        const frame = await event.data.arrayBuffer();
+        if (socket.readyState === WebSocket.OPEN) socket.send(frame);
+      });
+    };
+    recorder.onstop = () => {
+      activeVoiceTurnRef.current = null;
+      if (recorderRef.current === recorder) recorderRef.current = null;
+      if (streamRef.current === stream) streamRef.current = null;
+      stream.getTracks().forEach((track) => track.stop());
+      void audioSendChainRef.current.finally(() => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: "audio.commit", turn_id: turnId }));
+        }
+      });
+    };
     recorder.start(250); setTranscript("");
   }, [connect, ensureSession, isVoiceAvailable, language, stopVoice]);
   const confirmAction = useCallback(async (confirmationText: string) => { const sessionId = sessionIdRef.current; if (!actionPreview || !sessionId || !confirmationText.trim()) return; try { const response = await meriAiClient.confirm(sessionId, { tool_call_id: actionPreview.id, accepted: true, confirmation_text: confirmationText.trim() }); handlePayload(response); setActionPreview(null); } catch (cause) { setError(cause instanceof Error ? cause : new Error("Confirmation failed.")); } }, [actionPreview, handlePayload]);

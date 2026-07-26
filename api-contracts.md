@@ -26,6 +26,7 @@ states never include credentials.
     "gemini": "configured",
     "addis_ai_voice": "configured",
     "elevenlabs": "configured",
+    "elevenlabs_voice": "configured",
     "exa": "optional"
   }
 }
@@ -126,10 +127,9 @@ action proposal. It never returns raw text answers.
 
 ### `POST /api/sessions/{session_id}/text`
 
-Submits a text turn. Until task 006 adds Gemini reasoning, the route accepts
-deterministic structured fields for selecting a verified service or recording one
-confirmed answer. The `text` field is used only for the current turn fallback and
-is not persisted.
+Submits a text or structured turn. A service selection or confirmed answer may be
+sent without a placeholder `text` value. For unstructured turns, `text` is used
+only for the current turn by constrained Gemini reasoning and is not persisted.
 
 ```json
 {
@@ -461,9 +461,10 @@ persisted or returned in JSON events.
 
 ### `audio.commit`
 
-Finishes the active audio turn. If Addis AI STT is configured and succeeds, the
-gateway emits `transcript.final` and processes the transcript through the same
-conversation path as `text.message`. If speech input is unavailable or fails, the
+Finishes the active audio turn. If the selected language's STT provider is
+configured and succeeds, the gateway emits `transcript.final` and processes the
+transcript through the same conversation path as `text.message`. Amharic uses
+Addis AI; English uses ElevenLabs. If speech input is unavailable or fails, the
 gateway emits a `status` event with `state: "text_only"` and keeps the session
 open for keyboard input.
 
@@ -512,6 +513,21 @@ keep the socket open. Browser execution starts in tasks 010-011.
   "sequence": 1,
   "timestamp": "2026-07-25T18:00:01Z",
   "payload": { "state": "thinking" }
+}
+```
+
+Voice status events include a `speech` object so the client can stop recording
+and keep typed input available when a capability falls back:
+
+```json
+{
+  "state": "text_only",
+  "speech": {
+    "capability": "stt",
+    "provider": "text_only",
+    "status": "fallback",
+    "reason_code": "stt_provider_unavailable"
+  }
 }
 ```
 
@@ -603,7 +619,7 @@ provider URLs. Addis AI serves Amharic TTS and ElevenLabs serves English TTS.
     "status": "available",
     "provider": "addis_ai",
     "reason_code": "ok",
-    "mime_type": "audio/mpeg",
+    "mime_type": "audio/wav",
     "byte_length": 16384,
     "audio_base64": "..."
   }

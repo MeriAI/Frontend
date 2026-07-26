@@ -86,7 +86,7 @@ export function useSpeechRecognition({
     }
     clearTimers();
     setIsListening(false);
-  }, [clearTimers, finish, recognition]);
+  }, [clearTimers, recognition]);
 
   useEffect(
     () => () => {

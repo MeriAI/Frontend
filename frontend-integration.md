@@ -43,9 +43,11 @@ reason code to update voice controls.
    connection; apply only increasing sequence values within that connection.
 
 For structured selection, send `service_identifier`. For a prompted answer,
-send `{ "question_key": "…", "value": "…" }` in `answer`. Otherwise send the
-user's current text in `text`; it is processed only for that turn and is not
-returned by the REST session-state endpoint.
+send `{ "question_key": "…", "value": "…" }` in `answer`. These structured
+turns do not need a placeholder `text` value. Otherwise send the user's current
+non-blank text in `text`; it is processed only for that turn and is not returned
+by the REST session-state endpoint. Once a service is selected, resending that
+same identifier is safe; switching services requires a new session.
 
 ## WebSocket event handling
 
@@ -72,9 +74,11 @@ Binary frames are valid only after `audio.start`.
 ## Voice and accessibility
 
 For an audio turn, send `audio.start` with a `turn_id`, language, and
-`mime_type` (the supported client flow uses `audio/webm`), send binary frames,
-then send `audio.commit` with the same turn ID. Audio is kept only in memory by
-the backend. Keep a client-side recording within the 5 MB server limit.
+`mime_type` (the supported client flow uses `audio/webm`), wait for the returned
+`status: listening`, send every binary frame (including the recorder's final
+`dataavailable` frame), then send `audio.commit` with the same turn ID. Audio is
+kept only in memory by the backend. Keep a client-side recording within the 5 MB
+server limit.
 
 On successful transcription, render `transcript.final` as an accessibility
 caption, then handle the normal assistant and checklist events for that turn.
