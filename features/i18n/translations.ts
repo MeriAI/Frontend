@@ -129,46 +129,31 @@ const en = {
     stopLabel: "Stop listening",
   },
   chat: {
-    contextTitle: "Ethiopian Government Services",
+    contextTitle: "MeriAI",
     contextSubtitle: "Requirements, documents, fees, and next steps",
     officialBadge: "Official-source guidance",
     emptyTitle: "Which government service can I help you prepare for?",
     emptyBody:
-      "Ask a question or choose a topic from the service panel. Guidance is informational and does not replace an official application.",
+      "Ask a question or choose a verified service from the service panel. Guidance is informational and does not replace an official application.",
     newInquiry: "New inquiry",
-    topicsLabel: "Service topics",
-    topics: [
-      "Required documents",
-      "Fees and payment",
-      "Processing times",
-      "Where to apply",
-      "Renewals and replacements",
-    ],
-    topicPrompt: (topic: string) => `Tell me more about ${topic}`,
+    topicsLabel: "Available services",
+    servicesLoading: "Loading verified services…",
     placeholder:
       "Ask about any government service: documents, fees, offices, or timelines...",
-    presetTitle: "Add attachment or preset prompt",
     speakTitle: "Speak prompt",
-    assistantName: "AI Service Desk",
+    assistantName: "MeriAI",
     assistantFooter: "Service guidance",
     userFooter: "You",
     copyTitle: "Copy text",
     speakAloudTitle: "Speak response aloud",
     welcome:
-      "Welcome to AI Service Desk. I can help you understand requirements, documents, fees, and next steps for Ethiopian government services. Which service would you like to prepare for?",
+      "Welcome to MeriAI. I can help you understand requirements, documents, fees, and next steps for Ethiopian government services. Which service would you like to prepare for?",
     newSession:
       "New session started. Which government service or requirement can I help you understand?",
     emptyResponse:
       "I received your request, but no guidance came back. Please try again.",
     errorFallback:
       "I could not reach the service just now. Please try again in a moment.",
-    samplePrompts: [
-      "Which documents should I bring to my appointment?",
-      "How long does this service usually take?",
-      "What are the official fees and how are they paid?",
-      "Which office or branch handles this service?",
-      "What happens if one of my documents is missing?",
-    ],
   },
   accessibility: {
     title: "Accessibility",
@@ -320,44 +305,29 @@ const am: Translation = {
     stopLabel: "ማዳመጥ አቁም",
   },
   chat: {
-    contextTitle: "የኢትዮጵያ የመንግስት አገልግሎቶች",
+    contextTitle: "MeriAI",
     contextSubtitle: "መስፈርቶች፣ ሰነዶች፣ ክፍያዎች እና ቀጣይ ደረጃዎች",
     officialBadge: "ከይፋዊ ምንጭ የተወሰደ መመሪያ",
     emptyTitle: "የትኛውን የመንግስት አገልግሎት እንዲያዘጋጁ ልረዳዎት?",
     emptyBody:
-      "ጥያቄ ይጠይቁ ወይም ከአገልግሎት ፓነሉ ርዕስ ይምረጡ። መመሪያው መረጃ ሰጪ ብቻ ነው፤ ይፋዊ ማመልከቻን አይተካም።",
+      "ጥያቄ ይጠይቁ ወይም ከአገልግሎት ፓነሉ የተረጋገጠ አገልግሎት ይምረጡ። መመሪያው መረጃ ሰጪ ብቻ ነው፤ ይፋዊ ማመልከቻን አይተካም።",
     newInquiry: "አዲስ ጥያቄ",
-    topicsLabel: "የአገልግሎት ርዕሶች",
-    topics: [
-      "የሚያስፈልጉ ሰነዶች",
-      "ክፍያና አከፋፈል",
-      "የማስኬጃ ጊዜ",
-      "የት ማመልከት",
-      "እድሳትና መተካት",
-    ],
-    topicPrompt: (topic: string) => `ስለ ${topic} የበለጠ ንገረኝ`,
+    topicsLabel: "የሚገኙ አገልግሎቶች",
+    servicesLoading: "የተረጋገጡ አገልግሎቶችን በመጫን ላይ…",
     placeholder:
       "ስለ ማንኛውም የመንግስት አገልግሎት ይጠይቁ፦ ሰነዶች፣ ክፍያዎች፣ ቢሮዎች ወይም ጊዜያት...",
-    presetTitle: "ተያያዥ ሰነድ ወይም ቅድመ ጥያቄ ጨምር",
     speakTitle: "ጥያቄውን በድምፅ ተናገር",
-    assistantName: "AI አገልግሎት ዴስክ",
+    assistantName: "MeriAI",
     assistantFooter: "የአገልግሎት መመሪያ",
     userFooter: "እርስዎ",
     copyTitle: "ጽሑፉን ቅዳ",
     speakAloudTitle: "መልሱን በድምፅ አንብብ",
     welcome:
-      "ወደ AI አገልግሎት ዴስክ እንኳን በደህና መጡ። ለኢትዮጵያ የመንግስት አገልግሎቶች መስፈርቶችን፣ ሰነዶችን፣ ክፍያዎችን እና ቀጣይ ደረጃዎችን ለመረዳት ልረዳዎት እችላለሁ። የትኛውን አገልግሎት እንዲያዘጋጁ ይፈልጋሉ?",
+      "ወደ MeriAI እንኳን በደህና መጡ። ለኢትዮጵያ የመንግስት አገልግሎቶች መስፈርቶችን፣ ሰነዶችን፣ ክፍያዎችን እና ቀጣይ ደረጃዎችን ለመረዳት ልረዳዎት እችላለሁ። የትኛውን አገልግሎት እንዲያዘጋጁ ይፈልጋሉ?",
     newSession:
       "አዲስ ክፍለ ጊዜ ተጀምሯል። የትኛውን የመንግስት አገልግሎት ወይም መስፈርት እንዲረዱ ልረዳዎት?",
     emptyResponse: "ጥያቄዎን ተቀብያለሁ፤ ግን ምላሽ አልተገኘም። እባክዎ እንደገና ይሞክሩ።",
     errorFallback: "አገልግሎቱን አሁን ማግኘት አልቻልኩም። እባክዎ ከጥቂት ጊዜ በኋላ ይሞክሩ።",
-    samplePrompts: [
-      "ወደ ቀጠሮዬ ምን ሰነዶች ማምጣት አለብኝ?",
-      "ይህ አገልግሎት ምን ያህል ጊዜ ይወስዳል?",
-      "ይፋዊ ክፍያው ስንት ነው እና እንዴት ይከፈላል?",
-      "ይህን አገልግሎት የሚሰጠው የትኛው ቢሮ ነው?",
-      "አንድ ሰነድ ከጠፋ ምን ይሆናል?",
-    ],
   },
   accessibility: {
     title: "የተደራሽነት መቼቶች",

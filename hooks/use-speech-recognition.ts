@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { getRandomSamplePrompt } from "@/features/studio/fixtures";
 import { BrowserVoiceRecognitionAdapter } from "@/lib/adapters/browser-voice";
 import type { VoiceRecognitionPort } from "@/lib/ports/voice";
 
@@ -25,56 +24,26 @@ export function useSpeechRecognition({
   const [isListening, setIsListening] = useState(false);
   const transcriptRef = useRef("");
   const onCompleteRef = useRef(onComplete);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const runRef = useRef(0);
-  const simulatingRef = useRef(false);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
   const clearTimers = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+    // Reserved for a future recognition adapter that needs local cleanup.
   }, []);
 
   const finish = useCallback((run = runRef.current) => {
     if (run !== runRef.current) {
       return;
     }
-    simulatingRef.current = false;
-    timeoutRef.current = null;
     setIsListening(false);
     const finalTranscript = transcriptRef.current;
     if (finalTranscript.trim()) {
       onCompleteRef.current(finalTranscript);
     }
   }, []);
-
-  const simulate = useCallback(() => {
-    clearTimers();
-    simulatingRef.current = true;
-    const run = runRef.current;
-    const prompt = getRandomSamplePrompt();
-    let index = 0;
-    intervalRef.current = setInterval(() => {
-      index += 3;
-      const nextTranscript = prompt.slice(0, index);
-      transcriptRef.current = nextTranscript;
-      setTranscript(nextTranscript);
-      if (index >= prompt.length) {
-        clearTimers();
-        timeoutRef.current = setTimeout(() => finish(run), 800);
-      }
-    }, 90);
-  }, [clearTimers, finish]);
 
   const start = useCallback(() => {
     clearTimers();
@@ -85,7 +54,7 @@ export function useSpeechRecognition({
     setIsListening(true);
 
     if (!recognition.supported) {
-      simulate();
+      setIsListening(false);
       return;
     }
 
@@ -99,28 +68,24 @@ export function useSpeechRecognition({
           },
           onError: (error) => {
             console.log("Speech recognition error:", error.code);
+            setIsListening(false);
           },
           onEnd: () => finish(run),
         },
         { continuous: false, interimResults: true, language },
       );
     } catch {
-      simulate();
+      setIsListening(false);
     }
-  }, [clearTimers, finish, language, recognition, simulate]);
+  }, [clearTimers, finish, language, recognition]);
 
   const stop = useCallback(() => {
-    if (simulatingRef.current) {
-      clearTimers();
-      finish();
-      return;
-    }
     if (recognition.supported) {
       recognition.stop();
       return;
     }
     clearTimers();
-    finish();
+    setIsListening(false);
   }, [clearTimers, finish, recognition]);
 
   useEffect(

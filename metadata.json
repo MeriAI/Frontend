@@ -1,6 +1,6 @@
 {
-  "name": "Bauhaus Voice AI Studio",
-  "description": "Voice-first AI interface with ElevenLabs-inspired Bauhaus studio notebook design system and fluid morphing audio sphere visualizer.",
+  "name": "MeriAI",
+  "description": "Voice and chat guidance for Ethiopian government services.",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_EXTERNAL_API_INTEGRATION"]
 }

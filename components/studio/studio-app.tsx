@@ -8,7 +8,6 @@ import { Header } from "@/components/studio/header";
 import { VoiceStage } from "@/components/studio/voice-stage";
 import { useTranslations } from "@/features/i18n/use-translations";
 import { useSettings } from "@/features/settings/settings-provider";
-import { getRandomSamplePrompt } from "@/features/studio/fixtures";
 import { useMeriAiSession } from "@/hooks/use-meriai-session";
 import type { SpeechState, StudioMode } from "@/types/studio";
 
@@ -181,16 +180,8 @@ export function StudioApp({ initialMode = "voice" }: StudioAppProps) {
             bottomRef={chatBottomRef}
             onInputChange={setChatInput}
             onSubmit={handleChatSubmit}
-            onPresetPrompt={() => {
-              setSpeechState("processing");
-              void sendText(getRandomSamplePrompt(t.chat.samplePrompts));
-            }}
             onToggleListening={toggleListening}
             onNewChat={startNewChat}
-            onSelectTopic={(topic) => {
-              setSpeechState("processing");
-              void sendText(t.chat.topicPrompt(topic));
-            }}
             onCopy={handleCopyMessage}
             checklist={checklist}
             research={research}

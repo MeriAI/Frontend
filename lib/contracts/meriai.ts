@@ -191,6 +191,15 @@ export function parseMeriAiEvent(value: unknown): ParseResult<MeriAiEvent> {
     return { ok: true, value: { type: "action.result", sequence: eventSequence, entry: entryText ? { id: string(payload.id) ?? crypto.randomUUID(), text: entryText, timestamp: string(payload.timestamp) } : undefined, snapshot: parseSessionSnapshot(payload) } };
   }
   if (type === "error") return { ok: true, value: { type: "error", sequence: eventSequence, code: string(payload.code) ?? "request_failed" } };
+
+  // REST text turns return a session snapshot instead of a WebSocket envelope.
+  // Normalize it so typed chat and live voice share one rendering path.
+  const assistantMessage = string(value.assistant_message);
+  if (assistantMessage) {
+    const action = parseActionProposal({ tool_call_id: value.tool_call_id, tool_name: value.tool_name, browser_session_id: value.browser_session_id, summary: assistantMessage });
+    const snapshot = parseSessionSnapshot(value) ?? { missingQuestions: [] };
+    return { ok: true, value: { type: "assistant.message", text: assistantMessage, verified: value.trust_level === "verified_kb", research: parseResearch(value.research), snapshot: { ...snapshot, ...(value.tool_status === "pending_confirmation" && action ? { actionProposal: action } : {}) } } };
+  }
   const issues: ValidationIssue[] = [{ path: "type", message: `Unsupported MeriAI event: ${type ?? "missing"}.` }];
   return { ok: false, issues };
 }

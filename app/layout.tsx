@@ -4,7 +4,7 @@ import './globals.css'; // Global styles
 import {SettingsProvider} from '@/features/settings/settings-provider';
 
 export const metadata: Metadata = {
-  title: 'AI Service Desk — Ethiopian Government Services',
+  title: 'MeriAI — Ethiopian Government Services',
   description:
     'Understand requirements, documents, fees, and next steps for Ethiopian government services before you apply.',
 };

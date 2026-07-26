@@ -22,10 +22,8 @@ interface ChatWorkspaceProps {
   bottomRef: RefObject<HTMLDivElement | null>;
   onInputChange: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
-  onPresetPrompt: () => void;
   onToggleListening: () => void;
   onNewChat: () => void;
-  onSelectTopic: (topic: string) => void;
   onCopy: (id: string, text: string) => void;
   checklist: Checklist | null;
   research: Research | null;
@@ -48,10 +46,8 @@ export function ChatWorkspace({
   bottomRef,
   onInputChange,
   onSubmit,
-  onPresetPrompt,
   onToggleListening,
   onNewChat,
-  onSelectTopic,
   onCopy,
   checklist,
   research,
@@ -76,7 +72,6 @@ export function ChatWorkspace({
         isOpen={sidebarOpen}
         theme={theme}
         onNewChat={onNewChat}
-        onSelectTopic={onSelectTopic}
         services={services}
         onSelectService={onSelectService}
       />
@@ -150,7 +145,6 @@ export function ChatWorkspace({
                 isListening={isListening}
                 onChange={onInputChange}
                 onSubmit={onSubmit}
-                onPresetPrompt={onPresetPrompt}
                 onToggleListening={onToggleListening}
               />
             </div>
@@ -203,7 +197,6 @@ export function ChatWorkspace({
               isListening={isListening}
               onChange={onInputChange}
               onSubmit={onSubmit}
-              onPresetPrompt={onPresetPrompt}
               onToggleListening={onToggleListening}
             />
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Settings2, Volume2, VolumeX } from "lucide-react";
+import Link from "next/link";
 
 import { useTranslations } from "@/features/i18n/use-translations";
 import type { Contrast, Theme } from "@/features/settings/settings-provider";
@@ -24,7 +25,13 @@ export function Header({
 
   return (
     <header className={`w-full mx-auto px-6 pt-4 pb-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3 ${mode === "chat" ? "max-w-full px-4 md:px-6" : "max-w-6xl"}`}>
-      <span aria-hidden="true" />
+      <Link
+        href="/"
+        aria-label="MeriAI home"
+        className={`justify-self-start text-base font-semibold tracking-[-0.03em] ${theme === "dark" ? "text-[#F3F8F6]" : "text-[#163F3D]"}`}
+      >
+        MeriAI
+      </Link>
 
       <div className={`justify-self-center flex p-1 rounded-full space-x-1 ${theme === "dark" ? "bg-[#182726]" : "bg-[#D5DFDB]"}`}>
         <button

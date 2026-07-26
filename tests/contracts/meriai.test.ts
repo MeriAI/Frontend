@@ -23,4 +23,11 @@ describe("MeriAI contracts", () => {
     expect(parseServices({ services: [{ id: "svc_passport_et", slug: "ethiopian-passport", name_en: "Ethiopian Passport Service" }] })).toEqual({ ok: true, value: [{ identifier: "ethiopian-passport", label: "Ethiopian Passport Service" }] });
     expect(parseSessionSnapshot({ checklist: [{ key: "renewed_kebele_id", status: "needed", label_en: "Renewed Kebele ID" }], missing_questions: [{ key: "age_band", prompt_en: "Are you under 40?", options: [{ value: "under_40", label_en: "Yes" }] }] })).toMatchObject({ checklist: { items: [{ id: "renewed_kebele_id", label: "Renewed Kebele ID" }] }, missingQuestions: [{ key: "age_band", prompt: "Are you under 40?", options: [{ value: "under_40", label: "Yes" }] }] });
   });
+
+  it("normalizes REST text turns into assistant messages", () => {
+    expect(parseMeriAiEvent({ assistant_message: "Answer saved.", trust_level: "verified_kb", checklist: [] })).toMatchObject({
+      ok: true,
+      value: { type: "assistant.message", text: "Answer saved.", verified: true },
+    });
+  });
 });

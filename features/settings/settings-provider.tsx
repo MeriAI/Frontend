@@ -35,11 +35,11 @@ export type {
 } from "@/types/studio";
 
 const DEFAULT_ACCOUNT_SETTINGS: AccountSettings = {
-  userName: "Nahom Teshome",
-  userEmail: "nahomteshome19@gmail.com",
-  userOrg: "Bauhaus Studio Workspace",
-  voiceModel: "Eleven Multilingual v2",
-  audioQuality: "44.1 kHz Studio HD",
+  userName: "",
+  userEmail: "",
+  userOrg: "",
+  voiceModel: "MeriAI managed voice",
+  audioQuality: "Server managed",
 };
 
 const ROOT_FONT_SIZES: Record<FontSize, string> = {

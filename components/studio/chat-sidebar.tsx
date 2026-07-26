@@ -10,7 +10,6 @@ interface ChatSidebarProps {
   isOpen: boolean;
   theme: Theme;
   onNewChat: () => void;
-  onSelectTopic: (topic: string) => void;
   services: MeriAiService[];
   onSelectService: (identifier: string) => void;
 }
@@ -19,7 +18,6 @@ export function ChatSidebar({
   isOpen,
   theme,
   onNewChat,
-  onSelectTopic,
   services,
   onSelectService,
 }: ChatSidebarProps) {
@@ -52,11 +50,11 @@ export function ChatSidebar({
           <div className={`px-3 pb-1 text-[10px] font-mono tracking-widest uppercase ${
             theme === "dark" ? "text-[#D5DFDB]" : "text-[#65736F]"
           }`}>{t.chat.topicsLabel}</div>
-          <div className="space-y-0.5">
-            {(services.length > 0 ? services : t.chat.topics.map((label) => ({ identifier: label, label }))).map((topic) => (
+          {services.length > 0 ? <div className="space-y-0.5">
+            {services.map((topic) => (
               <button
                 key={topic.identifier}
-                onClick={() => services.length > 0 ? onSelectService(topic.identifier) : onSelectTopic(topic.label)}
+                onClick={() => onSelectService(topic.identifier)}
                 className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors truncate cursor-pointer ${
                   theme === "dark"
                     ? "text-[#F3F8F6] hover:bg-[#182726]"
@@ -66,7 +64,7 @@ export function ChatSidebar({
                 {topic.label}
               </button>
             ))}
-          </div>
+          </div> : <p className={`px-3 py-2 text-xs leading-5 ${theme === "dark" ? "text-[#D5DFDB]" : "text-[#65736F]"}`}>{t.chat.servicesLoading}</p>}
         </div>
       </div>
     </div>

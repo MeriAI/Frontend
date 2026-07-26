@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { Mic, Plus, Send } from "lucide-react";
+import { Mic, Send } from "lucide-react";
 
 import { useTranslations } from "@/features/i18n/use-translations";
 import type { Theme } from "@/features/settings/settings-provider";
@@ -15,7 +15,6 @@ interface ChatComposerProps {
   isListening: boolean;
   onChange: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
-  onPresetPrompt: () => void;
   onToggleListening: () => void;
 }
 
@@ -39,7 +38,6 @@ export function ChatComposer({
   isListening,
   onChange,
   onSubmit,
-  onPresetPrompt,
   onToggleListening,
 }: ChatComposerProps) {
   const config = variants[variant];
@@ -54,18 +52,6 @@ export function ChatComposer({
           : "bg-[#FAFAF7] border-[#D5DFDB]"
       }`}
     >
-      <button
-        type="button"
-        title={t.chat.presetTitle}
-        onClick={onPresetPrompt}
-        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer flex-shrink-0 ${
-          theme === "dark"
-            ? "bg-[#101A1A] hover:bg-[#334846] text-[#F3F8F6]"
-            : "bg-[#F0F4F2] hover:bg-[#D5DFDB] text-[#163F3D]"
-        }`}
-      >
-        <Plus className="w-4 h-4" />
-      </button>
       <input
         id={config.inputId}
         type="text"

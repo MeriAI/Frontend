@@ -25,6 +25,7 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recordedBytesRef = useRef(0);
   const activeVoiceTurnRef = useRef<string | null>(null);
+  const sessionConfigRef = useRef<{ language: string; mode: string } | null>(null);
   const [messages, setMessages] = useState<Message[]>(() => [createMessage("ai", welcome)]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isVoiceAvailable, setIsVoiceAvailable] = useState(false);
@@ -94,19 +95,25 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
     socket.send(JSON.stringify({ type: "session.start" }));
   }, [client, handlePayload]);
   const ensureSession = useCallback(async () => {
-    if (sessionIdRef.current) return sessionIdRef.current;
+    if (sessionIdRef.current && sessionConfigRef.current?.language === language && sessionConfigRef.current.mode === mode) return sessionIdRef.current;
+    if (sessionIdRef.current) {
+      socketRef.current?.close();
+      sessionIdRef.current = null;
+      sequenceRef.current = -1;
+    }
     const ready = await client().ready();
-    setIsVoiceAvailable(ready.ready && ready.missingProviders.length === 0);
+    setIsVoiceAvailable(ready.ready);
     setStatusReason(ready.ready ? null : ((ready.reasonCode ?? ready.missingProviders.join(", ")) || "text_only"));
     if (!ready.ready) throw new Error(ready.reasonCode ?? "The MeriAI service is degraded.");
     const session = await client().createSession({ language, mode, client_capabilities: { audio: typeof MediaRecorder !== "undefined", subtitles: true, keyboard: true, browser_progress: true } });
     sessionIdRef.current = session.sessionId;
-    void connect();
+    sessionConfigRef.current = { language, mode };
+    await connect();
     return session.sessionId;
   }, [client, connect, language, mode]);
   useEffect(() => {
     void client().ready().then((ready) => {
-      setIsVoiceAvailable(ready.ready && ready.missingProviders.length === 0);
+      setIsVoiceAvailable(ready.ready);
       setStatusReason(ready.ready ? null : ((ready.reasonCode ?? ready.missingProviders.join(", ")) || "text_only"));
     }).catch(() => {
       setIsVoiceAvailable(false);
@@ -144,18 +151,25 @@ export function useMeriAiSession(language: string, mode: string, welcome: string
   }, []);
   const startVoice = useCallback(async () => {
     if (!isVoiceAvailable || !navigator.mediaDevices) return;
+    const mimeType = "audio/webm";
+    if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported(mimeType)) {
+      setIsVoiceAvailable(false);
+      setStatusReason("audio_format_unsupported");
+      return;
+    }
     await ensureSession(); await connect();
+    if (socketRef.current?.readyState !== WebSocket.OPEN) throw new Error("Voice connection is not ready.");
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); streamRef.current = stream;
-    const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" }); recorderRef.current = recorder;
+    const recorder = new MediaRecorder(stream, { mimeType }); recorderRef.current = recorder;
     const turnId = crypto.randomUUID();
     activeVoiceTurnRef.current = turnId;
     recordedBytesRef.current = 0;
-    socketRef.current?.send(JSON.stringify({ type: "audio.start", turn_id: turnId, language, mime_type: "audio/webm" }));
+    socketRef.current.send(JSON.stringify({ type: "audio.start", turn_id: turnId, language, mime_type: mimeType }));
     recorder.ondataavailable = async (event) => { recordedBytesRef.current += event.data.size; if (recordedBytesRef.current > 5 * 1024 * 1024) { stopVoice(); return; } if (event.data.size && socketRef.current?.readyState === WebSocket.OPEN) socketRef.current.send(await event.data.arrayBuffer()); };
     recorder.start(250); setTranscript("");
   }, [connect, ensureSession, isVoiceAvailable, language, stopVoice]);
   const confirmAction = useCallback(async (confirmationText: string) => { const sessionId = sessionIdRef.current; if (!actionPreview || !sessionId || !confirmationText.trim()) return; try { const response = await client().confirm(sessionId, { tool_call_id: actionPreview.id, accepted: true, confirmation_text: confirmationText.trim() }); handlePayload(response); setActionPreview(null); } catch (cause) { setError(cause instanceof Error ? cause : new Error("Confirmation failed.")); } }, [actionPreview, client, handlePayload]);
-  const startNewChat = useCallback(() => { socketRef.current?.close(); sessionIdRef.current = null; sequenceRef.current = -1; setChecklist(null); setResearch(null); setActionPreview(null); setActivity([]); setMissingQuestions([]); setMessages([createMessage("ai", welcome)]); }, [welcome]);
+  const startNewChat = useCallback(() => { socketRef.current?.close(); sessionIdRef.current = null; sessionConfigRef.current = null; sequenceRef.current = -1; setChecklist(null); setResearch(null); setActionPreview(null); setActivity([]); setMissingQuestions([]); setTranscript(""); setMessages([createMessage("ai", welcome)]); }, [welcome]);
   useEffect(() => () => { if (reconnectRef.current) clearTimeout(reconnectRef.current); recorderRef.current?.stop(); streamRef.current?.getTracks().forEach((track) => track.stop()); socketRef.current?.close(); }, []);
   return { messages, isProcessing, isVoiceAvailable, statusReason, transcript, checklist, research, actionPreview, activity, services, missingQuestions, error, sendText, selectService, answerQuestion, startVoice, stopVoice, confirmAction, startNewChat, isRecording: recorderRef.current?.state === "recording" };
 }
