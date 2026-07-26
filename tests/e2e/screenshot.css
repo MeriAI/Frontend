@@ -1,0 +1,4 @@
+/* The Next.js dev overlay floats above every page and animates, so keep it out of baselines. */
+nextjs-portal {
+  display: none !important;
+}

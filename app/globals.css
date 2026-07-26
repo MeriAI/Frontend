@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #fafaf7;
+    color: #163f3d;
+    font-family: var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+.headline-300 {
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  color: inherit;
+}
+
+.ui-body {
+  font-weight: 400;
+  color: #163f3d;
+}
+
+.ui-secondary {
+  font-weight: 400;
+  color: #65736f;
+}
+
+.pill-button {
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.bauhaus-card {
+  border-radius: 20px;
+  background: #f0f4f2;
+  border: 1px solid #d5dfdb;
+  box-shadow: 0 1px 2px rgba(22, 63, 61, 0.06);
+}
+
+/* Audio Sphere Blob Keyframes & Styles */
+@keyframes sphereMorphIdle {
+  0% {
+    border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    border-radius: 40% 60% 45% 55% / 40% 40% 60% 60%;
+    transform: rotate(180deg) scale(1.04);
+  }
+  100% {
+    border-radius: 55% 45% 65% 35% / 50% 55% 45% 50%;
+    transform: rotate(360deg) scale(1.02);
+  }
+}
+
+@keyframes sphereMorphActive {
+  0% {
+    border-radius: 50% 50% 30% 70% / 50% 30% 70% 50%;
+    transform: rotate(0deg) scale(1.04);
+  }
+  20% {
+    border-radius: 30% 70% 70% 30% / 30% 60% 40% 70%;
+    transform: rotate(72deg) scale(1.08);
+  }
+  40% {
+    border-radius: 70% 30% 40% 60% / 70% 30% 70% 30%;
+    transform: rotate(144deg) scale(1.02);
+  }
+  60% {
+    border-radius: 40% 60% 60% 40% / 40% 70% 30% 60%;
+    transform: rotate(216deg) scale(1.09);
+  }
+  80% {
+    border-radius: 60% 40% 50% 50% / 60% 40% 60% 40%;
+    transform: rotate(288deg) scale(1.03);
+  }
+  100% {
+    border-radius: 50% 50% 30% 70% / 50% 30% 70% 50%;
+    transform: rotate(360deg) scale(1.04);
+  }
+}
+
+@keyframes sphereGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 40px rgba(22, 63, 61, 0.25), 0 0 40px rgba(102, 200, 193, 0.2);
+    filter: blur(1px);
+  }
+  50% {
+    box-shadow: 0 0 65px rgba(22, 63, 61, 0.45), 0 0 60px rgba(102, 200, 193, 0.35);
+    filter: blur(0.5px);
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.audio-sphere {
+  background: radial-gradient(
+    circle at 30% 30%,
+    #163f3d 0%,
+    #66c8c1 50%,
+    #a7b7d8 100%
+  );
+  background-size: 200% 200%;
+  box-shadow: 0 0 50px rgba(22, 63, 61, 0.15);
+  filter: blur(1px);
+  transition: box-shadow 0.5s ease, filter 0.5s ease;
+}
+
+.audio-sphere-idle {
+  animation: 
+    sphereMorphIdle 12s ease-in-out infinite alternate,
+    gradientShift 20s linear infinite;
+}
+
+.audio-sphere-active {
+  animation: 
+    sphereMorphActive 6s ease-in-out infinite,
+    gradientShift 5s ease infinite,
+    sphereGlowPulse 2.5s ease-in-out infinite;
+}
+
+.audio-sphere-speaking {
+  animation: 
+    sphereMorphActive 3.5s ease-in-out infinite,
+    gradientShift 3s ease infinite,
+    sphereGlowPulse 1.5s ease-in-out infinite;
+}
+
+/* Custom Bauhaus Range Slider Styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #d5dfdb;
+  height: 4px;
+  border-radius: 9999px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #66c8c1;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #66c8c1;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+/* Custom scrollbar for chat history */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d5dfdb;
+  border-radius: 9999px;
+}
+
